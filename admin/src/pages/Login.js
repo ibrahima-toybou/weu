@@ -93,7 +93,7 @@ function Login() {
             Weu
           </div>
           <div style={{ fontSize: 13, color: "#7a9c8a", marginTop: 4 }}>
-            Interface Administration — Madina
+            Administration - Madina
           </div>
         </div>
 
