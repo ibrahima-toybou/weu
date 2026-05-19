@@ -466,3 +466,64 @@ tr:hover .tdBold {
 .btnRetard:hover {
   background: #fcc;
 }
+
+.resumeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.resumeItem {
+  background: #f4faf7;
+  border: 1px solid #d8eee4;
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.resumeVal {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0d6349;
+  line-height: 1;
+}
+
+.resumeLabel {
+  font-size: 11px;
+  color: #7a9c8a;
+  margin-top: 4px;
+}
+
+.payeurBon {
+  background: #e6f5ec;
+  border: 1px solid #b8ddc8;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a5c35;
+  margin-bottom: 4px;
+}
+
+.payeurMoyen {
+  background: #fdf0e0;
+  border: 1px solid #f5d4a0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #7a4a00;
+  margin-bottom: 4px;
+}
+
+.payeurMauvais {
+  background: #fdecea;
+  border: 1px solid #f5b3b3;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b1a1a;
+  margin-bottom: 4px;
+}
