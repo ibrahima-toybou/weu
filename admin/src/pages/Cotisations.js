@@ -20,6 +20,7 @@ function Cotisations() {
   const [errorPopup, setErrorPopup] = useState("");
   const [successPopup, setSuccessPopup] = useState("");
   const [popupModifier, setPopupModifier] = useState(null);
+  const [menageDetail, setMenageDetail] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -435,38 +436,94 @@ function Cotisations() {
             </div>
 
             <div className={styles.popupBody}>
-              {errorPopup && (
-                <div className={styles.alertError}>{errorPopup}</div>
-              )}
-              {successPopup && (
-                <div className={styles.alertSuccess}>{successPopup}</div>
-              )}
-
-              {/* Statut du mois sélectionné */}
-              <div className={styles.popupSection}>
-                Statut — {getPeriodeLabel(moisSelectionne + "-01")}
-              </div>
-              {(() => {
-                const cotisation = getCotisationMenage(
-                  menageSelectionne.id_menage,
-                );
-                const statut = cotisation?.statut || "en_retard";
-                return (
-                  <div className={styles.histItem}>
-                    <span className={styles.histMois}>
-                      {getPeriodeLabel(moisSelectionne + "-01")}
-                    </span>
-                    <span className={styles.histMontant}>
-                      {cotisation?.montant
-                        ? parseFloat(cotisation.montant).toLocaleString(
-                            "fr-FR",
-                          ) + " FC"
-                        : "3 000 FC"}
-                    </span>
-                    <span className={getBadge(statut)}>{statut}</span>
+              {/* Résumé */}
+              {!loadingPopup && (
+                <>
+                  <div className={styles.popupSection}>Résumé</div>
+                  <div className={styles.resumeGrid}>
+                    <div className={styles.resumeItem}>
+                      <div className={styles.resumeVal}>
+                        {
+                          historiquePopup.filter((h) => h.statut === "payé")
+                            .length
+                        }
+                      </div>
+                      <div className={styles.resumeLabel}>Mois payés</div>
+                    </div>
+                    <div className={styles.resumeItem}>
+                      <div
+                        className={styles.resumeVal}
+                        style={{ color: "#c0392b" }}
+                      >
+                        {
+                          historiquePopup.filter(
+                            (h) => h.statut === "en_retard",
+                          ).length
+                        }
+                      </div>
+                      <div className={styles.resumeLabel}>Mois en retard</div>
+                    </div>
+                    <div className={styles.resumeItem}>
+                      <div
+                        className={styles.resumeVal}
+                        style={{ color: "#0d6349" }}
+                      >
+                        {historiquePopup
+                          .filter((h) => h.statut === "payé")
+                          .reduce(
+                            (sum, h) => sum + parseFloat(h.montant || 0),
+                            0,
+                          )
+                          .toLocaleString("fr-FR")}{" "}
+                        FC
+                      </div>
+                      <div className={styles.resumeLabel}>Total payé</div>
+                    </div>
+                    <div className={styles.resumeItem}>
+                      <div
+                        className={styles.resumeVal}
+                        style={{ fontSize: 13, marginTop: 4 }}
+                      >
+                        {menageDetail?.date_inscription
+                          ? new Date(
+                              menageDetail.date_inscription,
+                            ).toLocaleDateString("fr-FR")
+                          : "—"}
+                      </div>
+                      <div className={styles.resumeLabel}>Inscrit le</div>
+                    </div>
                   </div>
-                );
-              })()}
+
+                  {/* Badge bon/mauvais payeur */}
+                  {(() => {
+                    const total = historiquePopup.length;
+                    const payes = historiquePopup.filter(
+                      (h) => h.statut === "payé",
+                    ).length;
+                    const taux = total > 0 ? (payes / total) * 100 : 0;
+                    if (taux >= 80)
+                      return (
+                        <div className={styles.payeurBon}>
+                          ⭐ Bon payeur — {Math.round(taux)}% de paiements à
+                          jour
+                        </div>
+                      );
+                    if (taux >= 50)
+                      return (
+                        <div className={styles.payeurMoyen}>
+                          ⚠️ Payeur irrégulier — {Math.round(taux)}% de
+                          paiements à jour
+                        </div>
+                      );
+                    return (
+                      <div className={styles.payeurMauvais}>
+                        ❌ Mauvais payeur — {Math.round(taux)}% de paiements à
+                        jour
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
 
               {/* Historique */}
               <div className={styles.popupSection} style={{ marginTop: 20 }}>
@@ -502,30 +559,6 @@ function Cotisations() {
                   </div>
                 ))
               )}
-
-              {/* Actions */}
-              {(() => {
-                const cotisation = getCotisationMenage(
-                  menageSelectionne.id_menage,
-                );
-                const statut = cotisation?.statut || "en_retard";
-                if (statut === "payé") return null;
-                return (
-                  <div className={styles.popupActions}>
-                    <button
-                      className={styles.btnPayer}
-                      onClick={enregistrerPaiement}
-                    >
-                      ✓ Enregistrer le paiement — 3 000 FC
-                    </button>
-                    {statut !== "exonéré" && (
-                      <button className={styles.btnExonerer} onClick={exonerer}>
-                        Exonérer ce ménage pour ce mois
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
             </div>
           </div>
         </div>
