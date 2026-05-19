@@ -421,3 +421,48 @@ tr:hover .tdBold {
   border: 1px solid #b8ddc8;
   color: #1a5c35;
 }
+
+.btnModifier {
+  background: #f4faf7;
+  border: 1px solid #c0ddd0;
+  color: #4a6a58;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  margin-left: 6px;
+}
+
+.btnModifier:hover {
+  background: #fdf0e0;
+  border-color: #f5d4a0;
+  color: #7a4a00;
+}
+
+.popupModifier {
+  background: #fff;
+  border-radius: 16px;
+  width: 400px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.btnRetard {
+  background: #fdecea;
+  color: #8b1a1a;
+  border: 1px solid #f5b3b3;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  width: 100%;
+}
+
+.btnRetard:hover {
+  background: #fcc;
+}
