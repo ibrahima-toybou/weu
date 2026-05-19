@@ -19,6 +19,7 @@ function Cotisations() {
   const [loadingPopup, setLoadingPopup] = useState(false);
   const [errorPopup, setErrorPopup] = useState("");
   const [successPopup, setSuccessPopup] = useState("");
+  const [popupModifier, setPopupModifier] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -57,15 +58,23 @@ function Cotisations() {
     setSuccessPopup("");
     setLoadingPopup(true);
 
-    // Récupérer les 6 derniers mois de cotisations pour ce ménage
-    const { data } = await supabase
+    // Récupérer les 6 derniers mois de cotisations
+    const { data: historique } = await supabase
       .from("cotisation")
       .select("*")
       .eq("id_menage", menage.id_menage)
       .order("periode", { ascending: false })
       .limit(6);
 
-    setHistoriquePopup(data || []);
+    // Récupérer la date d'inscription du ménage
+    const { data: menageData } = await supabase
+      .from("menage")
+      .select("date_inscription")
+      .eq("id_menage", menage.id_menage)
+      .single();
+
+    setHistoriquePopup(historique || []);
+    setMenageDetail(menageData || null);
     setLoadingPopup(false);
   }
 
@@ -170,6 +179,47 @@ function Cotisations() {
     setSuccessPopup("Ménage exonéré pour ce mois.");
     fetchData();
     ouvrirPopup(menageSelectionne);
+  }
+  async function modifierStatut(statut) {
+    const cotisation = getCotisationMenage(popupModifier.id_menage);
+    const periodeDebut = moisSelectionne + "-01";
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const { data: utilisateur } = await supabase
+      .from("utilisateur")
+      .select("id_utilisateur")
+      .eq("auth_id", user.id)
+      .single();
+
+    if (cotisation) {
+      await supabase
+        .from("cotisation")
+        .update({
+          statut,
+          date_paiement:
+            statut === "payé" ? new Date().toISOString().split("T")[0] : null,
+          montant: statut === "exonéré" ? 0 : 3000,
+          mode_paiement: statut === "payé" ? "cash" : null,
+          id_utilisateur: utilisateur.id_utilisateur,
+        })
+        .eq("id_cotisation", cotisation.id_cotisation);
+    } else {
+      await supabase.from("cotisation").insert({
+        id_menage: popupModifier.id_menage,
+        periode: periodeDebut,
+        montant: statut === "exonéré" ? 0 : 3000,
+        statut,
+        date_paiement:
+          statut === "payé" ? new Date().toISOString().split("T")[0] : null,
+        mode_paiement: statut === "payé" ? "cash" : null,
+        id_utilisateur: utilisateur.id_utilisateur,
+      });
+    }
+
+    setPopupModifier(null);
+    fetchData();
   }
 
   function getPeriodeLabel(periode) {
@@ -350,6 +400,12 @@ function Cotisations() {
                           >
                             Voir détails
                           </button>
+                          <button
+                            className={styles.btnModifier}
+                            onClick={() => setPopupModifier(m)}
+                          >
+                            Modifier
+                          </button>
                         </td>
                       </tr>
                     );
@@ -361,7 +417,7 @@ function Cotisations() {
         </div>
       </div>
 
-      {/* POPUP */}
+      {/* POPUP DETAILS */}
       {menageSelectionne && (
         <div className={styles.overlay} onClick={fermerPopup}>
           <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
@@ -453,37 +509,74 @@ function Cotisations() {
                   menageSelectionne.id_menage,
                 );
                 const statut = cotisation?.statut || "en_retard";
+                if (statut === "payé") return null;
                 return (
                   <div className={styles.popupActions}>
-                    {statut !== "payé" && (
-                      <button
-                        className={styles.btnPayer}
-                        onClick={enregistrerPaiement}
-                      >
-                        ✓ Enregistrer le paiement — 3 000 FC
-                      </button>
-                    )}
-                    {statut !== "exonéré" && statut !== "payé" && (
+                    <button
+                      className={styles.btnPayer}
+                      onClick={enregistrerPaiement}
+                    >
+                      ✓ Enregistrer le paiement — 3 000 FC
+                    </button>
+                    {statut !== "exonéré" && (
                       <button className={styles.btnExonerer} onClick={exonerer}>
                         Exonérer ce ménage pour ce mois
-                      </button>
-                    )}
-                    {statut === "payé" && (
-                      <button className={styles.btnExonerer} onClick={exonerer}>
-                        ✎ Modifier — Passer en exonéré
-                      </button>
-                    )}
-                    {statut === "exonéré" && (
-                      <button
-                        className={styles.btnPayer}
-                        onClick={enregistrerPaiement}
-                      >
-                        ✎ Modifier — Enregistrer comme payé
                       </button>
                     )}
                   </div>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP MODIFIER */}
+      {popupModifier && (
+        <div className={styles.overlay} onClick={() => setPopupModifier(null)}>
+          <div
+            className={styles.popupModifier}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.popupHead}>
+              <div>
+                <div className={styles.popupTitle}>Modifier le statut</div>
+                <div className={styles.popupSub}>
+                  {popupModifier.nom} ·{" "}
+                  {getPeriodeLabel(moisSelectionne + "-01")}
+                </div>
+              </div>
+              <button
+                className={styles.btnFermer}
+                onClick={() => setPopupModifier(null)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className={styles.popupBody}>
+              <div className={styles.popupSection}>
+                Choisir le nouveau statut
+              </div>
+              <div className={styles.popupActions}>
+                <button
+                  className={styles.btnPayer}
+                  onClick={() => modifierStatut("payé")}
+                >
+                  ✅ Marquer comme payé — 3 000 FC
+                </button>
+                <button
+                  className={styles.btnExonerer}
+                  onClick={() => modifierStatut("exonéré")}
+                >
+                  🔘 Marquer comme exonéré
+                </button>
+                <button
+                  className={styles.btnRetard}
+                  onClick={() => modifierStatut("en_retard")}
+                >
+                  ❌ Marquer comme en retard
+                </button>
+              </div>
             </div>
           </div>
         </div>
