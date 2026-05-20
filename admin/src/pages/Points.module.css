@@ -1,0 +1,523 @@
+.page {
+  padding: 24px 28px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0d6349;
+  margin-bottom: 4px;
+}
+
+.sub {
+  font-size: 13px;
+  color: #7a9c8a;
+  margin-bottom: 24px;
+}
+
+/* KPIs */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.kpi {
+  background: #fff;
+  border: 1px solid #c0ddd0;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.kpiLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7a9c8a;
+  font-weight: 600;
+}
+
+.kpiVal {
+  font-size: 30px;
+  font-weight: 800;
+  margin-top: 4px;
+  line-height: 1;
+}
+
+.kpiSub {
+  font-size: 11px;
+  color: #7a9c8a;
+  margin-top: 5px;
+}
+
+/* GRILLE DES POINTS */
+.pointsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.pointCard {
+  background: #fff;
+  border: 1px solid #c0ddd0;
+  border-radius: 14px;
+  padding: 18px;
+  border-left: 4px solid transparent;
+  transition: box-shadow 0.2s;
+}
+
+.pointCard:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.pointCardPlein {
+  border-left-color: #c0392b;
+}
+
+.pointCardMoyen {
+  border-left-color: #e8a020;
+}
+
+.pointCardVide {
+  border-left-color: #1a8f69;
+}
+
+.pointTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.pointNom {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0d6349;
+}
+
+.pointSecteur {
+  font-size: 11px;
+  color: #7a9c8a;
+  margin-top: 2px;
+}
+
+/* BARRE */
+.barWrap {
+  margin-bottom: 8px;
+}
+
+.barLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #5a5a58;
+  margin-bottom: 4px;
+}
+
+.barTrack {
+  height: 8px;
+  background: #f4faf7;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #d8eee4;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.barPlein {
+  background: #c0392b;
+}
+
+.barMoyen {
+  background: #e8a020;
+}
+
+.barVide {
+  background: #1a8f69;
+}
+
+.pointCount {
+  font-size: 11px;
+  color: #7a9c8a;
+  margin-bottom: 12px;
+}
+
+.pointCount strong {
+  color: #1a2a20;
+}
+
+/* BOUTONS */
+.btnVider {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: #fdecea;
+  color: #8b1a1a;
+}
+
+.btnVider:hover {
+  background: #fcc;
+}
+
+.btnSurveiller {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  background: #fdf0e0;
+  color: #7a4a00;
+}
+
+.btnOk {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  background: #f4faf7;
+  color: #7a9c8a;
+  cursor: default;
+}
+
+/* BADGES */
+.badgePlein {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #fdecea;
+  color: #8b1a1a;
+}
+
+.badgeMoyen {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #fdf0e0;
+  color: #7a4a00;
+}
+
+.badgeVide {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #e6f5ec;
+  color: #1a5c35;
+}
+
+/* HISTORIQUE */
+.card {
+  background: #fff;
+  border: 1px solid #c0ddd0;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+
+.cardHead {
+  padding: 14px 18px;
+  border-bottom: 1px solid #d8eee4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0d6349;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.th {
+  text-align: left;
+  padding: 10px 18px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7a9c8a;
+  background: #f4faf7;
+  font-weight: 600;
+}
+
+.td {
+  padding: 12px 18px;
+  font-size: 13px;
+  border-bottom: 1px solid #d8eee4;
+  color: #1a2a20;
+}
+
+.tdBold {
+  padding: 12px 18px;
+  font-size: 13px;
+  border-bottom: 1px solid #d8eee4;
+  color: #1a2a20;
+  font-weight: 500;
+}
+
+.tdEmpty {
+  padding: 24px 18px;
+  text-align: center;
+  color: #7a9c8a;
+  font-size: 13px;
+}
+
+.tdLoading {
+  padding: 24px;
+  text-align: center;
+  color: #7a9c8a;
+}
+
+/* POPUP */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.popup {
+  background: #fff;
+  border-radius: 16px;
+  width: 480px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.popupHead {
+  padding: 20px 24px;
+  border-bottom: 1px solid #d8eee4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.popupTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0d6349;
+}
+
+.popupSub {
+  font-size: 12px;
+  color: #7a9c8a;
+  margin-top: 2px;
+}
+
+.btnFermer {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #7a9c8a;
+}
+
+.btnFermer:hover {
+  color: #0d6349;
+}
+
+.popupBody {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.popupInfo {
+  font-size: 13px;
+  color: #4a6a58;
+  line-height: 1.6;
+}
+
+.btnConfirmer {
+  background: #1a8f69;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btnConfirmer:hover {
+  background: #0d6349;
+}
+
+.btnAnnuler {
+  background: transparent;
+  border: 1px solid #c0ddd0;
+  color: #4a6a58;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.alertSuccess {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #e6f5ec;
+  border: 1px solid #b8ddc8;
+  color: #1a5c35;
+}
+
+.pointMenages {
+  font-size: 11px;
+  color: #7a9c8a;
+  margin-bottom: 12px;
+}
+
+.pointMenages strong {
+  color: #1a2a20;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #c0ddd0;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+
+.cardHead {
+  padding: 14px 18px;
+  border-bottom: 1px solid #d8eee4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0d6349;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  padding: 18px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4a6a58;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.input {
+  border: 1px solid #c0ddd0;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: #1a2a20;
+  background: #f4faf7;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: #1a8f69;
+  background: #fff;
+}
+
+.formFooter {
+  padding: 14px 18px;
+  border-top: 1px solid #d8eee4;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btnGreen {
+  background: #1a8f69;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btnGreen:hover {
+  background: #0d6349;
+}
+
+.btnOutline {
+  background: transparent;
+  border: 1px solid #c0ddd0;
+  color: #4a6a58;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.alertError {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin: 14px 18px 0;
+  background: #fdecea;
+  border: 1px solid #f5b3b3;
+  color: #8b1a1a;
+}
+
+.alertSuccessForm {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin: 14px 18px 0;
+  background: #e6f5ec;
+  border: 1px solid #b8ddc8;
+  color: #1a5c35;
+}
