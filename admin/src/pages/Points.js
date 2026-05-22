@@ -17,6 +17,14 @@ function Points() {
   const [seuilPoint, setSeuilPoint] = useState(60);
   const [errorForm, setErrorForm] = useState("");
   const [successForm, setSuccessForm] = useState("");
+  const [pointSelectionne, setPointSelectionne] = useState(null);
+  const [modeEdition, setModeEdition] = useState(false);
+  const [nomEdit, setNomEdit] = useState("");
+  const [adresseEdit, setAdresseEdit] = useState("");
+  const [secteurEdit, setSecteurEdit] = useState("");
+  const [successEdit, setSuccessEdit] = useState("");
+  const [errorEdit, setErrorEdit] = useState("");
+  const [historique, setHistorique] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -25,7 +33,7 @@ function Points() {
   async function fetchData() {
     setLoading(true);
 
-    const [pointsRes, pointagesRes, menagesRes, secteursRes] =
+    const [pointsRes, pointagesRes, menagesRes, secteursRes, historiqueRes] =
       await Promise.all([
         supabase.from("point_collecte").select("*, secteur(nom)").order("nom"),
         supabase
@@ -34,12 +42,20 @@ function Points() {
           .eq("statut_sync", "synchronisé"),
         supabase.from("menage").select("id_point").eq("statut", "actif"),
         supabase.from("secteur").select("*").order("nom"),
+        supabase
+          .from("tournee_point")
+          .select(
+            "*, point_collecte(nom, secteur(nom)), tournee(date, utilisateur(nom))",
+          )
+          .order("heure_vidage", { ascending: false })
+          .limit(20),
       ]);
 
     if (!pointsRes.error) setPoints(pointsRes.data);
     if (!pointagesRes.error) setPointages(pointagesRes.data);
     if (!menagesRes.error) setMenages(menagesRes.data);
     if (!secteursRes.error) setSecteurs(secteursRes.data);
+    if (!historiqueRes.error) setHistorique(historiqueRes.data);
     setLoading(false);
   }
   function getNbMenages(idPoint) {
@@ -85,18 +101,19 @@ function Points() {
   async function confirmerVidage() {
     if (!pointAVider) return;
 
-    // Récupérer l'utilisateur connecté
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    const { data: utilisateur } = await supabase
+    const { data: utilisateur, error: userError } = await supabase
       .from("utilisateur")
       .select("id_utilisateur")
       .eq("auth_id", user.id)
       .single();
 
-    // Créer une tournée
-    const { data: tournee } = await supabase
+    console.log("utilisateur:", utilisateur);
+    console.log("userError:", userError);
+
+    const { data: tournee, error: tourneeError } = await supabase
       .from("tournee")
       .insert({
         date: new Date().toISOString().split("T")[0],
@@ -106,27 +123,33 @@ function Points() {
       .select()
       .single();
 
-    if (tournee) {
-      // Enregistrer le point vidé
-      await supabase.from("tournee_point").insert({
-        id_tournee: tournee.id_tournee,
-        id_point: pointAVider.id_point,
-        heure_vidage: new Date().toISOString(),
-        nb_pointages_au_vidage: getNbPointages(pointAVider.id_point),
-      });
+    console.log("tournee:", tournee);
+    console.log("tourneeError:", tourneeError);
 
-      // Remettre les pointages à zéro en les marquant comme archivés
-      await supabase
+    if (tournee) {
+      const { error: tourneePointError } = await supabase
+        .from("tournee_point")
+        .insert({
+          id_tournee: tournee.id_tournee,
+          id_point: pointAVider.id_point,
+          heure_vidage: new Date().toISOString(),
+          nb_pointages_au_vidage: getNbPointages(pointAVider.id_point),
+        });
+
+      console.log("tourneePointError:", tourneePointError);
+
+      const { error: pointageError } = await supabase
         .from("pointage")
         .update({ statut_sync: "archivé" })
         .eq("id_point", pointAVider.id_point)
         .eq("statut_sync", "synchronisé");
+
+      console.log("pointageError:", pointageError);
     }
 
     setSuccessVidage(`Point ${pointAVider.nom} vidé avec succès !`);
     setPointAVider(null);
     fetchData();
-
     setTimeout(() => setSuccessVidage(""), 4000);
   }
 
@@ -158,7 +181,43 @@ function Points() {
       fetchData();
     }
   }
+  function ouvrirPopupPoint(p) {
+    setPointSelectionne(p);
+    setModeEdition(false);
+    setNomEdit(p.nom);
+    setAdresseEdit(p.adresse || "");
+    setSecteurEdit(p.id_secteur);
+    setSuccessEdit("");
+    setErrorEdit("");
+  }
 
+  async function handleModifierPoint(e) {
+    e.preventDefault();
+    setErrorEdit("");
+    setSuccessEdit("");
+
+    if (!nomEdit || !secteurEdit) {
+      setErrorEdit("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("point_collecte")
+      .update({
+        nom: nomEdit,
+        adresse: adresseEdit || "À définir",
+        id_secteur: parseInt(secteurEdit),
+      })
+      .eq("id_point", pointSelectionne.id_point);
+
+    if (error) {
+      setErrorEdit("Erreur lors de la modification : " + error.message);
+    } else {
+      setSuccessEdit("Point modifié avec succès !");
+      setModeEdition(false);
+      fetchData();
+    }
+  }
   // KPIs
   const nbMenagesParPoint = (idPoint) => {
     return points.find((p) => p.id_point === idPoint)?.nb_menages || 0;
@@ -166,7 +225,9 @@ function Points() {
 
   const pleins = points.filter((p) => {
     const nb = getNbPointages(p.id_point);
-    return nb >= 10;
+    const nbMenages = getNbMenages(p.id_point);
+    if (nbMenages === 0) return false;
+    return (nb / nbMenages) * 100 >= 100;
   }).length;
 
   const totalPointages = pointages.length;
@@ -330,6 +391,13 @@ function Points() {
                     👥 <strong>{nbMenages}</strong> ménages affectés
                   </div>
 
+                  <button
+                    className={styles.btnDetails}
+                    onClick={() => ouvrirPopupPoint(p)}
+                  >
+                    🔍 Voir détails / Modifier
+                  </button>
+
                   {statut === "plein" && (
                     <button
                       className={styles.btnVider}
@@ -356,6 +424,9 @@ function Points() {
         <div className={styles.card}>
           <div className={styles.cardHead}>
             <span className={styles.cardTitle}>Historique des vidages</span>
+            <span style={{ fontSize: 13, color: "#7a9c8a" }}>
+              {historique.length} vidage(s)
+            </span>
           </div>
           <table className={styles.table}>
             <thead>
@@ -363,15 +434,50 @@ function Points() {
                 <th className={styles.th}>Point</th>
                 <th className={styles.th}>Secteur</th>
                 <th className={styles.th}>Date vidage</th>
-                <th className={styles.th}>Nb pointages au vidage</th>
+                <th className={styles.th}>Heure</th>
+                <th className={styles.th}>Pointages au vidage</th>
+                <th className={styles.th}>Agent</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td colSpan={4} className={styles.tdEmpty}>
-                  Aucun vidage enregistré pour l'instant
-                </td>
-              </tr>
+              {historique.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className={styles.tdEmpty}>
+                    Aucun vidage enregistré pour l'instant
+                  </td>
+                </tr>
+              ) : (
+                historique.map((h, i) => (
+                  <tr
+                    key={i}
+                    style={{ background: i % 2 === 0 ? "#fff" : "#f9fdf9" }}
+                  >
+                    <td className={styles.tdBold}>
+                      {h.point_collecte?.nom || "—"}
+                    </td>
+                    <td className={styles.td}>
+                      {h.point_collecte?.secteur?.nom || "—"}
+                    </td>
+                    <td className={styles.td}>
+                      {h.tournee?.date
+                        ? new Date(h.tournee.date).toLocaleDateString("fr-FR")
+                        : "—"}
+                    </td>
+                    <td className={styles.td}>
+                      {h.heure_vidage
+                        ? new Date(h.heure_vidage).toLocaleTimeString("fr-FR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "—"}
+                    </td>
+                    <td className={styles.td}>{h.nb_pointages_au_vidage}</td>
+                    <td className={styles.td}>
+                      {h.tournee?.utilisateur?.nom || "—"}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -426,6 +532,153 @@ function Points() {
               >
                 Annuler
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* POPUP DETAILS POINT */}
+      {pointSelectionne && (
+        <div
+          className={styles.overlay}
+          onClick={() => setPointSelectionne(null)}
+        >
+          <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.popupHead}>
+              <div>
+                <div className={styles.popupTitle}>{pointSelectionne.nom}</div>
+                <div className={styles.popupSub}>
+                  Secteur {pointSelectionne.secteur?.nom}
+                </div>
+              </div>
+              <button
+                className={styles.btnFermer}
+                onClick={() => setPointSelectionne(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.popupBody}>
+              {errorEdit && (
+                <div className={styles.alertError}>{errorEdit}</div>
+              )}
+              {successEdit && (
+                <div className={styles.alertSuccess}>{successEdit}</div>
+              )}
+
+              {!modeEdition ? (
+                <>
+                  {/* Statistiques */}
+                  <div className={styles.popupSection}>Statistiques</div>
+                  <div className={styles.popupGrid}>
+                    <div className={styles.popupStat}>
+                      <div className={styles.popupStatVal}>
+                        {getNbPointages(pointSelectionne.id_point)}
+                      </div>
+                      <div className={styles.popupStatLabel}>
+                        Pointages actuels
+                      </div>
+                    </div>
+                    <div className={styles.popupStat}>
+                      <div className={styles.popupStatVal}>
+                        {getNbMenages(pointSelectionne.id_point)}
+                      </div>
+                      <div className={styles.popupStatLabel}>
+                        Ménages affectés
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Infos */}
+                  <div className={styles.popupSection}>Informations</div>
+                  <div className={styles.popupInfo}>
+                    <strong>Adresse :</strong>{" "}
+                    {pointSelectionne.adresse || "Non renseignée"}
+                  </div>
+                  <div className={styles.popupInfo}>
+                    <strong>Seuil d'alerte :</strong>{" "}
+                    {pointSelectionne.seuil_alerte}%
+                  </div>
+                  <div className={styles.popupInfo}>
+                    <strong>Remplissage actuel :</strong>{" "}
+                    {getNbMenages(pointSelectionne.id_point) > 0
+                      ? Math.round(
+                          (getNbPointages(pointSelectionne.id_point) /
+                            getNbMenages(pointSelectionne.id_point)) *
+                            100,
+                        )
+                      : 0}
+                    %
+                  </div>
+
+                  <button
+                    className={styles.btnConfirmer}
+                    onClick={() => setModeEdition(true)}
+                  >
+                    ✎ Modifier les informations
+                  </button>
+                  <button
+                    className={styles.btnAnnuler}
+                    onClick={() => setPointSelectionne(null)}
+                  >
+                    Fermer
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Formulaire modification */}
+                  <div className={styles.popupSection}>Modifier le point</div>
+                  <form
+                    onSubmit={handleModifierPoint}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                    }}
+                  >
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Nom du point *</label>
+                      <input
+                        className={styles.input}
+                        value={nomEdit}
+                        onChange={(e) => setNomEdit(e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Adresse</label>
+                      <input
+                        className={styles.input}
+                        value={adresseEdit}
+                        onChange={(e) => setAdresseEdit(e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Secteur *</label>
+                      <select
+                        className={styles.input}
+                        value={secteurEdit}
+                        onChange={(e) => setSecteurEdit(e.target.value)}
+                      >
+                        {secteurs.map((s) => (
+                          <option key={s.id_secteur} value={s.id_secteur}>
+                            {s.nom}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button type="submit" className={styles.btnConfirmer}>
+                      ✓ Enregistrer les modifications
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.btnAnnuler}
+                      onClick={() => setModeEdition(false)}
+                    >
+                      Annuler
+                    </button>
+                  </form>
+                </>
+              )}
             </div>
           </div>
         </div>
