@@ -1,0 +1,468 @@
+.page {
+  padding: 24px 28px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0d6349;
+  margin-bottom: 4px;
+}
+
+.sub {
+  font-size: 13px;
+  color: #7a9c8a;
+  margin-bottom: 24px;
+}
+
+/* KPIs */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.kpi {
+  background: #fff;
+  border: 1px solid #c0ddd0;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.kpiLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7a9c8a;
+  font-weight: 600;
+}
+
+.kpiVal {
+  font-size: 28px;
+  font-weight: 800;
+  margin-top: 4px;
+  line-height: 1;
+}
+
+.kpiSub {
+  font-size: 11px;
+  color: #7a9c8a;
+  margin-top: 5px;
+}
+
+/* GRID */
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+/* CARD */
+.card {
+  background: #fff;
+  border: 1px solid #c0ddd0;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+
+.cardHead {
+  padding: 14px 18px;
+  border-bottom: 1px solid #d8eee4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0d6349;
+}
+
+.cardCount {
+  font-size: 13px;
+  color: #7a9c8a;
+}
+
+/* FORMULAIRE */
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 18px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.formGroupFull {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  grid-column: 1 / -1;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #4a6a58;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.input {
+  border: 1px solid #c0ddd0;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: #1a2a20;
+  background: #f4faf7;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: #1a8f69;
+  background: #fff;
+}
+
+.formFooter {
+  padding: 14px 18px;
+  border-top: 1px solid #d8eee4;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* BOUTONS */
+.btnGreen {
+  background: #1a8f69;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btnGreen:hover {
+  background: #0d6349;
+}
+
+.btnOutline {
+  background: transparent;
+  border: 1px solid #c0ddd0;
+  color: #4a6a58;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btnOutline:hover {
+  background: #f4faf7;
+}
+
+.btnSmallBlue {
+  background: #e5f1fd;
+  border: 1px solid #85b7eb;
+  color: #0a3d7a;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  margin-right: 4px;
+}
+
+.btnSmallRed {
+  background: #fdecea;
+  border: 1px solid #f5b3b3;
+  color: #8b1a1a;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* FILTRES */
+.searchBar {
+  padding: 12px 18px;
+  border-bottom: 1px solid #d8eee4;
+  display: flex;
+  gap: 10px;
+}
+
+.select {
+  border: 1px solid #c0ddd0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #1a2a20;
+  background: #f4faf7;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* TABLE */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.th {
+  text-align: left;
+  padding: 10px 18px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #7a9c8a;
+  background: #f4faf7;
+  font-weight: 600;
+  border-bottom: 1px solid #d8eee4;
+}
+
+.td {
+  padding: 12px 18px;
+  font-size: 13px;
+  border-bottom: 1px solid #d8eee4;
+  color: #1a2a20;
+}
+
+.tdBold {
+  padding: 12px 18px;
+  font-size: 13px;
+  border-bottom: 1px solid #d8eee4;
+  color: #1a2a20;
+  font-weight: 600;
+}
+
+.tdEmpty {
+  padding: 24px 18px;
+  text-align: center;
+  color: #7a9c8a;
+  font-size: 13px;
+}
+
+.tdLoading {
+  padding: 24px;
+  text-align: center;
+  color: #7a9c8a;
+}
+
+/* BADGES */
+.badgeCarburant {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #fdf0e0;
+  color: #7a4a00;
+}
+
+.badgeSalaire {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #e5f1fd;
+  color: #0a3d7a;
+}
+
+.badgeMaintenance {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f4faf7;
+  color: #4a6a58;
+}
+
+.badgeAutre {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f4faf7;
+  color: #7a9c8a;
+}
+
+/* RÉSUMÉ 6 MOIS */
+.resumeGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  padding: 18px;
+}
+
+.resumeMois {
+  background: #f4faf7;
+  border: 1px solid #d8eee4;
+  border-radius: 10px;
+  padding: 12px 10px;
+  text-align: center;
+}
+
+.resumeMoisLabel {
+  font-size: 11px;
+  color: #7a9c8a;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.resumeMoisRecette {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a8f69;
+  margin-bottom: 4px;
+}
+
+.resumeMoisDepense {
+  font-size: 12px;
+  font-weight: 700;
+  color: #c0392b;
+  margin-bottom: 4px;
+}
+
+.resumeMoisSolde {
+  font-size: 11px;
+  color: #4a6a58;
+  padding-top: 6px;
+  border-top: 1px solid #d8eee4;
+  margin-top: 4px;
+}
+
+/* ALERTES */
+.alertError {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin: 14px 18px 0;
+  background: #fdecea;
+  border: 1px solid #f5b3b3;
+  color: #8b1a1a;
+}
+
+.alertSuccess {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin: 14px 18px 0;
+  background: #e6f5ec;
+  border: 1px solid #b8ddc8;
+  color: #1a5c35;
+}
+
+/* POPUP */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.popup {
+  background: #fff;
+  border-radius: 16px;
+  width: 480px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.popupHead {
+  padding: 20px 24px;
+  border-bottom: 1px solid #d8eee4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.popupTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0d6349;
+}
+
+.btnFermer {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #7a9c8a;
+}
+
+.btnFermer:hover {
+  color: #0d6349;
+}
+
+.popupBody {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.popupFormGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.popupFormGroupFull {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.popupFormGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.popupFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #d8eee4;
+}
+
+.btnrouge {
+  background: #c0392b;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btnrouge:hover {
+  background: #8b1a1a;
+}
