@@ -1,0 +1,372 @@
+.page {
+  min-height: 100vh;
+  background: #f4faf7;
+  font-family: "DM Sans", sans-serif;
+}
+
+/* ── HERO ── */
+.hero {
+  background: #0d6349;
+  padding: 40px 32px 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+.heroPattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  background-image:
+    radial-gradient(circle at 20% 50%, #fff 1px, transparent 1px),
+    radial-gradient(circle at 80% 20%, #fff 1px, transparent 1px),
+    radial-gradient(circle at 60% 80%, #fff 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.heroLeft h1 {
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 6px;
+  letter-spacing: -0.5px;
+}
+
+.heroLeft p {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+.heroRight {
+  text-align: right;
+}
+
+.heroDate {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 4px;
+}
+
+.heroDateVal {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: capitalize;
+}
+
+/* ── KPI ROW (chevauchant le hero) ── */
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding: 0 32px;
+  margin-top: -48px;
+  position: relative;
+  z-index: 10;
+  margin-bottom: 28px;
+}
+
+.kpiCard {
+  background: #fff;
+  border-radius: 18px;
+  padding: 22px 20px;
+  box-shadow: 0 8px 32px rgba(13, 99, 73, 0.12);
+  border: 1px solid rgba(192, 221, 208, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.kpiCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  opacity: 0.06;
+  transform: translate(20px, -20px);
+}
+
+.kpiCard:nth-child(1)::before {
+  background: #1a8f69;
+}
+.kpiCard:nth-child(2)::before {
+  background: #1a5c99;
+}
+.kpiCard:nth-child(3)::before {
+  background: #c0392b;
+}
+.kpiCard:nth-child(4)::before {
+  background: #e8a020;
+}
+
+.kpiEmoji {
+  font-size: 24px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.kpiLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #7a9c8a;
+  margin-bottom: 6px;
+}
+
+.kpiVal {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.kpiSub {
+  font-size: 12px;
+  color: #7a9c8a;
+  margin-top: 6px;
+}
+
+/* ── BODY ── */
+.body {
+  padding: 0 32px 32px;
+}
+
+.gridMain {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* ── CARD ── */
+.card {
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid #d8eee4;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.cardHead {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f8f4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0d6349;
+}
+
+.cardBadge {
+  font-size: 11px;
+  background: #e6f5ec;
+  color: #1a5c35;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+/* ── POINTS ── */
+.pointsList {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pointRow {
+  display: grid;
+  grid-template-columns: 130px 1fr 50px 70px;
+  align-items: center;
+  gap: 12px;
+}
+
+.pointName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a2a20;
+}
+
+.pointSec {
+  font-size: 10px;
+  color: #7a9c8a;
+  margin-top: 1px;
+}
+
+.barTrack {
+  height: 7px;
+  background: #f0f8f4;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fillPlein {
+  background: linear-gradient(90deg, #e74c3c, #c0392b);
+}
+.fillMoyen {
+  background: linear-gradient(90deg, #f39c12, #e8a020);
+}
+.fillVide {
+  background: linear-gradient(90deg, #2ecc71, #1a8f69);
+}
+
+.pct {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.chipPlein {
+  background: #fdecea;
+  color: #8b1a1a;
+}
+.chipMoyen {
+  background: #fdf0e0;
+  color: #7a4a00;
+}
+.chipVide {
+  background: #e6f5ec;
+  color: #1a5c35;
+}
+
+/* ── ALERTES ── */
+.alertesList {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.alerte {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border-left: 3px solid;
+}
+
+.alerteRed {
+  background: #fdecea;
+  border-color: #c0392b;
+}
+.alerteOrange {
+  background: #fdf0e0;
+  border-color: #e8a020;
+}
+.alerteGreen {
+  background: #e6f5ec;
+  border-color: #1a8f69;
+}
+
+.alerteT {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a2a20;
+}
+
+.alerteB {
+  font-size: 11px;
+  color: #4a6a58;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.alerteEmpty {
+  text-align: center;
+  padding: 20px;
+  font-size: 13px;
+  color: #7a9c8a;
+}
+
+/* ── TIMELINE ── */
+.timeline {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.timelineItem {
+  display: flex;
+  gap: 14px;
+  padding: 10px 0;
+  position: relative;
+}
+
+.timelineItem:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 26px;
+  bottom: -10px;
+  width: 1px;
+  background: #d8eee4;
+}
+
+.tlDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px currentColor;
+}
+
+.tlContent {
+  flex: 1;
+}
+
+.tlTitle {
+  font-size: 13px;
+  color: #1a2a20;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.tlTime {
+  font-size: 11px;
+  color: #7a9c8a;
+  margin-top: 2px;
+}
+
+.tlEmpty {
+  text-align: center;
+  padding: 20px;
+  font-size: 13px;
+  color: #7a9c8a;
+}
+
+.loading {
+  padding: 24px;
+  text-align: center;
+  color: #7a9c8a;
+  font-size: 13px;
+}
