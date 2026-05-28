@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { supabase } from "./supabase";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Menages from "./pages/Menages";
@@ -8,6 +10,21 @@ import Tournees from "./pages/Tournees";
 import Finances from "./pages/Finances";
 
 function App() {
+  useEffect(() => {
+    async function checkJWT() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        console.log("JWT claims:", session.access_token);
+        // Décoder le JWT pour voir les claims
+        const payload = JSON.parse(atob(session.access_token.split(".")[1]));
+        console.log("Payload décodé:", payload);
+      }
+    }
+    checkJWT();
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
