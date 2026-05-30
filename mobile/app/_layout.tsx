@@ -19,10 +19,7 @@ export default function Layout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
-      <Stack.Screen name="accueil" />
-      <Stack.Screen name="pointage" />
-      <Stack.Screen name="paiement" />
-      <Stack.Screen name="historique" />
+      <Stack.Screen name="(tabs)" />
     </Stack>
   );
 }

@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { router } from "expo-router";
-import { supabase } from "./supabase";
+import { supabase } from "../supabase";
 
 export default function Accueil() {
   const [loading, setLoading] = useState(true);
@@ -272,28 +272,6 @@ export default function Accueil() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* BOTTOM NAV */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navIcon}>🏠</Text>
-          <Text style={[styles.navLabel, { color: "#1a8f69" }]}>Accueil</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/paiement")}
-        >
-          <Text style={styles.navIcon}>💳</Text>
-          <Text style={styles.navLabel}>Paiement</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/historique")}
-        >
-          <Text style={styles.navIcon}>📋</Text>
-          <Text style={styles.navLabel}>Historique</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }

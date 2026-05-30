@@ -8,7 +8,7 @@ import {
   Alert,
 } from "react-native";
 import { router } from "expo-router";
-import { supabase } from "./supabase";
+import { supabase } from "../supabase";
 import { styles } from "./paiement.styles";
 
 export default function Paiement() {
@@ -40,11 +40,12 @@ export default function Paiement() {
     setMenage(utilisateur?.menage);
 
     const moisActuel = new Date().toISOString().slice(0, 7);
+    const periodeDebut = moisActuel + "-01";
     const { data: cotisationData } = await supabase
       .from("cotisation")
       .select("*")
       .eq("id_menage", utilisateur?.menage?.id_menage)
-      .like("periode", `${moisActuel}%`)
+      .eq("periode", periodeDebut)
       .single();
 
     setCotisation(cotisationData);
@@ -69,12 +70,6 @@ export default function Paiement() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.backText}>←</Text>
-          </TouchableOpacity>
           <Text style={styles.headerTitle}>Payer ma cotisation</Text>
         </View>
 
@@ -125,7 +120,6 @@ export default function Paiement() {
             </View>
           </View>
 
-          {/* Si déjà payé */}
           {cotisation?.statut === "payé" ? (
             <View style={styles.dejaPaye}>
               <Text style={styles.dejaPayeIcon}>✅</Text>
@@ -153,7 +147,6 @@ export default function Paiement() {
             </View>
           ) : (
             <>
-              {/* Paiement mobile */}
               <TouchableOpacity
                 style={styles.btnMobile}
                 onPress={() =>
@@ -167,14 +160,12 @@ export default function Paiement() {
                 <Text style={styles.btnMobileText}>Paiement mobile</Text>
               </TouchableOpacity>
 
-              {/* Séparateur */}
               <View style={styles.separateur}>
                 <View style={styles.separateurLine} />
                 <Text style={styles.separateurText}>ou</Text>
                 <View style={styles.separateurLine} />
               </View>
 
-              {/* Cash */}
               <View style={styles.cashCard}>
                 <Text style={styles.cashTitle}>💵 Payer en cash</Text>
                 <Text style={styles.cashDesc}>

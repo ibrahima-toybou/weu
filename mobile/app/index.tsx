@@ -53,9 +53,9 @@ export default function Login() {
 
     // Redirection selon le rôle
     if (utilisateur.role === "habitant") {
-      router.replace("/accueil");
+      router.replace("/(tabs)/accueil");
     } else if (utilisateur.role === "agent_terrain") {
-      router.replace("/accueil");
+      router.replace("/(tabs)/accueil");
     } else {
       Alert.alert(
         "Accès refusé",
