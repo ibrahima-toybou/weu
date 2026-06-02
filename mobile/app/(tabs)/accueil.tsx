@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
@@ -10,6 +9,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../supabase";
+import { styles } from "./accueil.styles";
 
 export default function Accueil() {
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,6 @@ export default function Accueil() {
       return;
     }
 
-    // Récupérer l'utilisateur
     const { data: utilisateurData } = await supabase
       .from("utilisateur")
       .select("*, menage(*, point_collecte(*, secteur(nom)), secteur(nom))")
@@ -56,7 +55,6 @@ export default function Accueil() {
     if (idPoint) {
       setPoint(utilisateurData.menage?.point_collecte);
 
-      // Nombre de pointages sur ce point
       const { data: pointagesData } = await supabase
         .from("pointage")
         .select("id_pointage")
@@ -65,7 +63,6 @@ export default function Accueil() {
 
       setNbPointages(pointagesData?.length || 0);
 
-      // Nombre de ménages affectés à ce point
       const { data: menagesData } = await supabase
         .from("menage")
         .select("id_menage")
@@ -75,13 +72,14 @@ export default function Accueil() {
       setNbMenagesPoint(menagesData?.length || 0);
     }
 
-    // Cotisation du mois en cours
+    // Cotisation du mois en cours — correction du filtre
     const moisActuel = new Date().toISOString().slice(0, 7);
+    const periodeDebut = moisActuel + "-01";
     const { data: cotisationData } = await supabase
       .from("cotisation")
       .select("*")
       .eq("id_menage", utilisateurData.menage?.id_menage)
-      .like("periode", `${moisActuel}%`)
+      .eq("periode", periodeDebut)
       .single();
 
     setCotisation(cotisationData);
@@ -90,10 +88,6 @@ export default function Accueil() {
 
   async function handlePointage() {
     setPointageLoading(true);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
     const { error } = await supabase.from("pointage").insert({
       id_menage: menage.id_menage,
@@ -169,7 +163,6 @@ export default function Accueil() {
             </TouchableOpacity>
           </View>
 
-          {/* Cotisation dans le header */}
           <View style={styles.cotisationInHeader}>
             <View style={styles.cotisationLeft}>
               <Text style={styles.cotisationMoisLabel}>
@@ -187,7 +180,7 @@ export default function Accueil() {
               cotisation?.statut !== "exonéré" && (
                 <TouchableOpacity
                   style={styles.payerBtn}
-                  onPress={() => router.push("/paiement")}
+                  onPress={() => router.push("/(tabs)/paiement")}
                 >
                   <Text style={styles.payerBtnText}>Payer →</Text>
                 </TouchableOpacity>
@@ -275,5 +268,3 @@ export default function Accueil() {
     </View>
   );
 }
-
-import { styles } from "./accueil.styles";
