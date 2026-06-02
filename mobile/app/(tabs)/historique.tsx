@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { supabase } from "../supabase";
 import { styles } from "./historique.styles";
 
@@ -10,9 +11,11 @@ export default function Historique() {
   const [pointages, setPointages] = useState<any[]>([]);
   const [cotisations, setCotisations] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, []),
+  );
 
   async function fetchData() {
     setLoading(true);
@@ -36,7 +39,6 @@ export default function Historique() {
     const idMenage = utilisateur?.menage?.id_menage;
 
     if (idMenage) {
-      // Derniers pointages
       const { data: pointagesData } = await supabase
         .from("pointage")
         .select("*, point_collecte(nom)")
@@ -46,7 +48,6 @@ export default function Historique() {
 
       setPointages(pointagesData || []);
 
-      // Historique cotisations
       const { data: cotisationsData } = await supabase
         .from("cotisation")
         .select("*")
@@ -87,6 +88,7 @@ export default function Historique() {
   const pointagesMoisActuel = pointages.filter((p) =>
     p.date_heure?.startsWith(moisActuel),
   ).length;
+  const moisPayes = cotisations.filter((c) => c.statut === "payé").length;
 
   if (loading) {
     return (
@@ -120,21 +122,12 @@ export default function Historique() {
               <Text
                 style={[
                   styles.statVal,
-                  {
-                    color:
-                      cotisations.find((c) => c.periode?.startsWith(moisActuel))
-                        ?.statut === "payé"
-                        ? "#1a8f69"
-                        : "#c0392b",
-                  },
+                  { color: moisPayes >= 5 ? "#1a8f69" : "#e8a020" },
                 ]}
               >
-                {cotisations.find((c) => c.periode?.startsWith(moisActuel))
-                  ?.statut === "payé"
-                  ? "✓"
-                  : "⚠️"}
+                {moisPayes}/6
               </Text>
-              <Text style={styles.statLabel}>Cotisation ce mois</Text>
+              <Text style={styles.statLabel}>Mois payés</Text>
             </View>
           </View>
 
