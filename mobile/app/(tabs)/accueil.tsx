@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../supabase";
@@ -20,6 +21,8 @@ export default function Accueil() {
   const [nbPointages, setNbPointages] = useState(0);
   const [nbMenagesPoint, setNbMenagesPoint] = useState(0);
   const [pointageLoading, setPointageLoading] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [heurePointage, setHeurePointage] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -72,7 +75,6 @@ export default function Accueil() {
       setNbMenagesPoint(menagesData?.length || 0);
     }
 
-    // Cotisation du mois en cours — correction du filtre
     const moisActuel = new Date().toISOString().slice(0, 7);
     const periodeDebut = moisActuel + "-01";
     const { data: cotisationData } = await supabase
@@ -100,10 +102,13 @@ export default function Accueil() {
     if (error) {
       Alert.alert("Erreur", "Impossible d'enregistrer le pointage");
     } else {
-      Alert.alert(
-        "✅ Dépôt enregistré !",
-        `Point ${point?.nom} · ${new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`,
+      setHeurePointage(
+        new Date().toLocaleTimeString("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       );
+      setShowConfirmation(true);
       fetchData();
     }
 
@@ -265,6 +270,46 @@ export default function Accueil() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* MODAL CONFIRMATION */}
+      <Modal
+        visible={showConfirmation}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowConfirmation(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIcon}>
+              <Text style={styles.modalIconText}>✅</Text>
+            </View>
+            <Text style={styles.modalTitle}>Dépôt enregistré !</Text>
+            <Text style={styles.modalSub}>
+              Votre dépôt a bien été enregistré dans le système
+            </Text>
+            <View style={styles.modalInfo}>
+              <View style={styles.modalInfoRow}>
+                <Text style={styles.modalInfoLabel}>Point de collecte</Text>
+                <Text style={styles.modalInfoVal}>{point?.nom}</Text>
+              </View>
+              <View style={styles.modalInfoRow}>
+                <Text style={styles.modalInfoLabel}>Secteur</Text>
+                <Text style={styles.modalInfoVal}>{point?.secteur?.nom}</Text>
+              </View>
+              <View style={styles.modalInfoRow}>
+                <Text style={styles.modalInfoLabel}>Heure</Text>
+                <Text style={styles.modalInfoVal}>{heurePointage}</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.modalBtn}
+              onPress={() => setShowConfirmation(false)}
+            >
+              <Text style={styles.modalBtnText}>Retour à l'accueil</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
