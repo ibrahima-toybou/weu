@@ -55,7 +55,7 @@ export const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  // COTISATION INLINE DANS HEADER
+  // COTISATION DANS HEADER
   cotisationInHeader: {
     backgroundColor: "rgba(255,255,255,0.15)",
     borderRadius: 14,
@@ -215,27 +215,84 @@ export const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.65)",
   },
 
-  // BOTTOM NAV
-  bottomNav: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#e0f0e8",
-    paddingBottom: 28,
-    paddingTop: 10,
-  },
-  navItem: {
+  // MODAL CONFIRMATION
+  modalOverlay: {
     flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
     alignItems: "center",
-    paddingVertical: 4,
+    justifyContent: "center",
+    padding: 28,
   },
-  navIcon: {
-    fontSize: 22,
-    marginBottom: 3,
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 28,
+    alignItems: "center",
+    width: "100%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 12,
   },
-  navLabel: {
-    fontSize: 10,
+  modalIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#e6f5ec",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  modalIconText: {
+    fontSize: 34,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#0d6349",
+    marginBottom: 6,
+    letterSpacing: -0.3,
+  },
+  modalSub: {
+    fontSize: 13,
     color: "#7a9c8a",
-    fontWeight: "500",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  modalInfo: {
+    backgroundColor: "#f4faf7",
+    borderRadius: 12,
+    padding: 14,
+    width: "100%",
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#e0f0e8",
+  },
+  modalInfoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 5,
+  },
+  modalInfoLabel: {
+    fontSize: 12,
+    color: "#7a9c8a",
+  },
+  modalInfoVal: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#0d1f16",
+  },
+  modalBtn: {
+    backgroundColor: "#1a8f69",
+    borderRadius: 12,
+    padding: 14,
+    width: "100%",
+    alignItems: "center",
+  },
+  modalBtnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
