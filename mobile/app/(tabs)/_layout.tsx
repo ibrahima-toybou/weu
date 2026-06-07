@@ -49,6 +49,15 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="parametres"
+        options={{
+          title: "Paramètres",
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>⚙️</Text>
+          ),
+        }}
+      />
     </Tabs>
   );
 }
