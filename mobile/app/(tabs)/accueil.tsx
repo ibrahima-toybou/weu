@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
+import { useFocusEffect } from "expo-router";
 import {
   View,
   Text,
@@ -24,9 +25,11 @@ export default function Accueil() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [heurePointage, setHeurePointage] = useState("");
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, []),
+  );
 
   async function fetchData() {
     setLoading(true);
