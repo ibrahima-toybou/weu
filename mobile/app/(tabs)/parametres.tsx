@@ -50,7 +50,9 @@ export default function Parametres() {
 
     const { data: utilisateurData } = await supabase
       .from("utilisateur")
-      .select("*, menage(nom, telephone, point_collecte(nom), secteur(nom))")
+      .select(
+        "*, menage(id_menage, nom, telephone, point_collecte(nom), secteur(nom))",
+      )
       .eq("auth_id", user.id)
       .single();
 
@@ -68,9 +70,9 @@ export default function Parametres() {
     setError("");
 
     const { error } = await supabase
-      .from("utilisateur")
+      .from("menage")
       .update({ nom: nouveauNom })
-      .eq("id_utilisateur", utilisateur.id_utilisateur);
+      .eq("id_menage", menage.id_menage);
 
     if (error) {
       setError("Erreur lors de la modification");
@@ -414,6 +416,15 @@ export default function Parametres() {
                 <Text style={styles.alertSuccessText}>{success}</Text>
               </View>
             ) : null}
+            <Text style={styles.modalLabel}>Ancien mot de passe</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={ancienMdp}
+              onChangeText={setAncienMdp}
+              placeholder="••••••••"
+              placeholderTextColor="#9ab8a8"
+              secureTextEntry
+            />
             <Text style={styles.modalLabel}>Nouveau mot de passe</Text>
             <TextInput
               style={styles.modalInput}
