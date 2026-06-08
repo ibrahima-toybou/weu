@@ -33,7 +33,7 @@ export default function Paiement() {
 
     const { data: utilisateur } = await supabase
       .from("utilisateur")
-      .select("*, menage(nom, point_collecte(nom), secteur(nom))")
+      .select("*, menage(id_menage, nom, point_collecte(nom), secteur(nom))")
       .eq("auth_id", user.id)
       .single();
 
