@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
-import { router } from "expo-router";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { supabase } from "../supabase";
 import { styles } from "./historique.styles";
 
@@ -30,7 +29,9 @@ export default function Historique() {
 
     const { data: utilisateur } = await supabase
       .from("utilisateur")
-      .select("*, menage(id_menage, nom, point_collecte(nom))")
+      .select(
+        "*, menage(id_menage, nom, date_inscription, point_collecte(nom))",
+      )
       .eq("auth_id", user.id)
       .single();
 
@@ -48,17 +49,32 @@ export default function Historique() {
 
       setPointages(pointagesData || []);
 
+      // Récupérer toutes les cotisations payées depuis l'inscription
       const { data: cotisationsData } = await supabase
         .from("cotisation")
         .select("*")
         .eq("id_menage", idMenage)
-        .order("periode", { ascending: false })
-        .limit(6);
+        .order("periode", { ascending: false });
 
       setCotisations(cotisationsData || []);
     }
 
     setLoading(false);
+  }
+
+  function getNbMoisDepuisInscription() {
+    if (!menage?.date_inscription) return 0;
+    const inscription = new Date(menage.date_inscription);
+    const debut = new Date(
+      inscription.getFullYear(),
+      inscription.getMonth() + 1,
+      1,
+    );
+    const maintenant = new Date();
+    const mois =
+      (maintenant.getFullYear() - debut.getFullYear()) * 12 +
+      (maintenant.getMonth() - debut.getMonth());
+    return Math.max(0, mois);
   }
 
   function getPeriodeLabel(periode: string) {
@@ -88,6 +104,7 @@ export default function Historique() {
   const pointagesMoisActuel = pointages.filter((p) =>
     p.date_heure?.startsWith(moisActuel),
   ).length;
+  const nbMoisDepuis = getNbMoisDepuisInscription();
   const moisPayes = cotisations.filter((c) => c.statut === "payé").length;
 
   if (loading) {
@@ -122,10 +139,19 @@ export default function Historique() {
               <Text
                 style={[
                   styles.statVal,
-                  { color: moisPayes >= 5 ? "#1a8f69" : "#e8a020" },
+                  {
+                    color:
+                      nbMoisDepuis === 0
+                        ? "#7a9c8a"
+                        : moisPayes >= nbMoisDepuis
+                          ? "#1a8f69"
+                          : moisPayes >= nbMoisDepuis * 0.7
+                            ? "#e8a020"
+                            : "#c0392b",
+                  },
                 ]}
               >
-                {moisPayes}/6
+                {moisPayes}/{nbMoisDepuis}
               </Text>
               <Text style={styles.statLabel}>Mois payés</Text>
             </View>
@@ -143,7 +169,11 @@ export default function Historique() {
                     styles.itemDot,
                     {
                       backgroundColor:
-                        p.statut_sync === "synchronisé" ? "#1a8f69" : "#e8a020",
+                        p.statut_sync === "synchronisé"
+                          ? "#1a8f69"
+                          : p.statut_sync === "archivé"
+                            ? "#7a9c8a"
+                            : "#e8a020",
                     },
                   ]}
                 />
@@ -156,7 +186,11 @@ export default function Historique() {
                     styles.itemBadge,
                     {
                       backgroundColor:
-                        p.statut_sync === "synchronisé" ? "#e6f5ec" : "#fdf0e0",
+                        p.statut_sync === "synchronisé"
+                          ? "#e6f5ec"
+                          : p.statut_sync === "archivé"
+                            ? "#f4faf7"
+                            : "#fdf0e0",
                     },
                   ]}
                 >
@@ -167,11 +201,17 @@ export default function Historique() {
                         color:
                           p.statut_sync === "synchronisé"
                             ? "#0d6349"
-                            : "#7a4a00",
+                            : p.statut_sync === "archivé"
+                              ? "#7a9c8a"
+                              : "#7a4a00",
                       },
                     ]}
                   >
-                    {p.statut_sync === "synchronisé" ? "sync" : "attente"}
+                    {p.statut_sync === "synchronisé"
+                      ? "sync"
+                      : p.statut_sync === "archivé"
+                        ? "vidé ✓"
+                        : "attente"}
                   </Text>
                 </View>
               </View>
