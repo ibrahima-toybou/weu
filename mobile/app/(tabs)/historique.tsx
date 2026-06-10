@@ -65,15 +65,18 @@ export default function Historique() {
   function getNbMoisDepuisInscription() {
     if (!menage?.date_inscription) return 0;
     const inscription = new Date(menage.date_inscription);
-    const debut = new Date(
+    // Premier mois de cotisation = mois suivant l'inscription
+    const debutCotisation = new Date(
       inscription.getFullYear(),
       inscription.getMonth() + 1,
       1,
     );
     const maintenant = new Date();
+    // On inclut le mois actuel
     const mois =
-      (maintenant.getFullYear() - debut.getFullYear()) * 12 +
-      (maintenant.getMonth() - debut.getMonth());
+      (maintenant.getFullYear() - debutCotisation.getFullYear()) * 12 +
+      (maintenant.getMonth() - debutCotisation.getMonth()) +
+      1;
     return Math.max(0, mois);
   }
 
