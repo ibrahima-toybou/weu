@@ -63,6 +63,17 @@ export default function Login() {
       );
       await supabase.auth.signOut();
     }
+    if (utilisateur.role === "habitant") {
+      router.replace("/(tabs)/accueil");
+    } else if (utilisateur.role === "agent_terrain") {
+      router.replace("/(agent)/accueil");
+    } else {
+      Alert.alert(
+        "Accès refusé",
+        "Cette app est réservée aux habitants et agents",
+      );
+      await supabase.auth.signOut();
+    }
 
     setLoading(false);
   }
