@@ -126,9 +126,20 @@ export default function Parametres() {
 
     setSaving(true);
 
-    const { error } = await supabase.auth.updateUser({
-      password: nouveauMdp,
+    // Vérifier l'ancien mot de passe
+    const { error: verifError } = await supabase.auth.signInWithPassword({
+      email: utilisateur.email,
+      password: ancienMdp,
     });
+
+    if (verifError) {
+      setError("Mot de passe actuel incorrect");
+      setSaving(false);
+      return;
+    }
+
+    // Changer le mot de passe
+    const { error } = await supabase.auth.updateUser({ password: nouveauMdp });
 
     if (error) {
       setError("Erreur : " + error.message);
@@ -207,7 +218,7 @@ export default function Parametres() {
                 <Text style={styles.menuIconText}>👤</Text>
               </View>
               <View style={styles.menuContent}>
-                <Text style={styles.menuLabel}>Nom d'utilisateur</Text>
+                <Text style={styles.menuLabel}>Nom d’utilisateur</Text>
                 <Text style={styles.menuSub}>{utilisateur?.nom}</Text>
               </View>
               <Text style={styles.menuArrow}>›</Text>
