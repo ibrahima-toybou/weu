@@ -152,6 +152,7 @@ function Tournees() {
         id_utilisateur: 17, // Hamidou — agent qui effectue la tournée
         cree_par: adminData.id_utilisateur, // Admin qui a créé la tournée
         notes: notesUrgence || "Tournée d'urgence créée par l'admin",
+        statut: "en_cours",
       })
       .select()
       .single();
@@ -167,7 +168,7 @@ function Tournees() {
       await supabase.from("tournee_point").insert({
         id_tournee: tournee.id_tournee,
         id_point: idPoint,
-        heure_vidage: new Date().toISOString(),
+        heure_vidage: null,
         nb_pointages_au_vidage: getNbPointages(idPoint),
       });
 
@@ -178,7 +179,7 @@ function Tournees() {
         .eq("statut_sync", "synchronisé");
     }
 
-    setSuccessUrgence("Tournée d'urgence créée avec succès !");
+    setSuccessUrgence("Tournée d'urgence créée et envoyée à l'agent !");
     setPointsSelectionnes([]);
     setNotesUrgence("");
     setLoadingUrgence(false);
