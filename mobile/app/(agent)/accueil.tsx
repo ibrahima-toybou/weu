@@ -17,6 +17,8 @@ export default function AccueilAgent() {
   const [points, setPoints] = useState<any[]>([]);
   const [pointages, setPointages] = useState<any[]>([]);
   const [menages, setMenages] = useState<any[]>([]);
+  const [tourneesUrgentes, setTourneesUrgentes] = useState<any[]>([]);
+  const [tourneeEnCours, setTourneeEnCours] = useState<any>(null);
   const [creationLoading, setCreationLoading] = useState(false);
 
   useFocusEffect(
@@ -56,6 +58,29 @@ export default function AccueilAgent() {
     setPoints(pointsRes.data || []);
     setPointages(pointagesRes.data || []);
     setMenages(menagesRes.data || []);
+
+    // Vérifier s'il y a déjà une tournée en cours acceptée
+    const { data: tourneeEnCoursData } = await supabase
+      .from("tournee")
+      .select("*")
+      .eq("id_utilisateur", utilisateurData.id_utilisateur)
+      .eq("statut", "en_cours")
+      .eq("acceptee_par_agent", true)
+      .limit(1)
+      .single();
+
+    setTourneeEnCours(tourneeEnCoursData || null);
+
+    // Toutes les tournées urgentes créées par l'admin, pas encore acceptées
+    const { data: tourneesAdminData } = await supabase
+      .from("tournee")
+      .select("*, tournee_point(*, point_collecte(nom, secteur(nom)))")
+      .eq("statut", "en_cours")
+      .eq("acceptee_par_agent", false)
+      .order("date", { ascending: true });
+
+    setTourneesUrgentes(tourneesAdminData || []);
+
     setLoading(false);
   }
 
@@ -92,8 +117,22 @@ export default function AccueilAgent() {
     router.replace("/");
   }
 
-  async function accepterProposition(typeProposition: "immediate" | "demain") {
+  async function accepterProposition(
+    typeProposition: "immediate" | "demain" | "urgence",
+    idTourneeUrgente?: number,
+  ) {
     setCreationLoading(true);
+
+    if (typeProposition === "urgence" && idTourneeUrgente) {
+      await supabase
+        .from("tournee")
+        .update({ acceptee_par_agent: true })
+        .eq("id_tournee", idTourneeUrgente);
+
+      setCreationLoading(false);
+      router.push("/(agent)/tournee");
+      return;
+    }
 
     const pointsConcernes =
       typeProposition === "immediate"
@@ -116,6 +155,8 @@ export default function AccueilAgent() {
         date,
         id_utilisateur: utilisateur.id_utilisateur,
         cree_par: utilisateur.id_utilisateur,
+        statut: "en_cours",
+        acceptee_par_agent: true,
         notes:
           typeProposition === "immediate"
             ? "Tournée immédiate — points pleins"
@@ -130,10 +171,14 @@ export default function AccueilAgent() {
       return;
     }
 
-    Alert.alert(
-      "✅ Tournée créée !",
-      `${pointsConcernes.length} point(s) à vider. Rendez-vous dans l'onglet Tournée pour commencer.`,
-    );
+    for (const p of pointsConcernes) {
+      await supabase.from("tournee_point").insert({
+        id_tournee: tournee.id_tournee,
+        id_point: p.id_point,
+        heure_vidage: null,
+        nb_pointages_au_vidage: getNbPointages(p.id_point),
+      });
+    }
 
     setCreationLoading(false);
     router.push("/(agent)/tournee");
@@ -150,7 +195,6 @@ export default function AccueilAgent() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* HEADER */}
         <View style={styles.header}>
           <View>
             <Text style={styles.headerGreeting}>Bonjour 👋</Text>
@@ -166,114 +210,199 @@ export default function AccueilAgent() {
         </View>
 
         <View style={styles.body}>
-          {/* Propositions */}
-          <Text style={styles.cardLabel}>Propositions de tournées</Text>
-
-          {pointsPleins.length === 0 && pointsMoyens.length === 0 ? (
+          {tourneeEnCours ? (
             <View style={[styles.propositionCard, styles.propositionVide]}>
               <Text style={[styles.propositionTitle, { color: "#1a8f69" }]}>
-                ✅ Tout va bien
+                🚛 Tournée en cours
               </Text>
               <Text style={styles.propositionPoints}>
-                Aucun point ne nécessite de collecte pour le moment.
+                Vous avez déjà une tournée en cours. Rendez-vous dans l'onglet
+                Tournée pour continuer.
               </Text>
+              <TouchableOpacity
+                style={[styles.propositionBtn, { backgroundColor: "#1a8f69" }]}
+                onPress={() => router.push("/(agent)/tournee")}
+              >
+                <Text style={styles.propositionBtnText}>Voir ma tournée</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <>
-              {pointsPleins.length > 0 && (
-                <View
-                  style={[styles.propositionCard, styles.propositionUrgent]}
-                >
-                  <View style={styles.propositionHeader}>
-                    <Text
-                      style={[styles.propositionTitle, { color: "#8b1a1a" }]}
-                    >
-                      🚨 Tournée immédiate
-                    </Text>
-                    <View
-                      style={[
-                        styles.propositionBadge,
-                        { backgroundColor: "#fff" },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.propositionBadgeText,
-                          { color: "#8b1a1a" },
-                        ]}
-                      >
-                        {pointsPleins.length} point(s)
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.propositionPoints}>
-                    {pointsPleins.map((p) => p.nom).join(", ")} — Plein(s), à
-                    vider aujourd’hui.
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.propositionBtn,
-                      { backgroundColor: "#c0392b" },
-                    ]}
-                    onPress={() => accepterProposition("immediate")}
-                    disabled={creationLoading}
-                  >
-                    <Text style={styles.propositionBtnText}>
-                      {creationLoading
-                        ? "Création..."
-                        : "Accepter cette tournée"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+              <Text style={styles.cardLabel}>Propositions de tournées</Text>
 
-              {pointsMoyens.length > 0 && (
-                <View
-                  style={[styles.propositionCard, styles.propositionDemain]}
-                >
-                  <View style={styles.propositionHeader}>
-                    <Text
-                      style={[styles.propositionTitle, { color: "#7a4a00" }]}
-                    >
-                      📅 Tournée demain
-                    </Text>
+              {pointsPleins.length === 0 &&
+              pointsMoyens.length === 0 &&
+              tourneesUrgentes.length === 0 ? (
+                <View style={[styles.propositionCard, styles.propositionVide]}>
+                  <Text style={[styles.propositionTitle, { color: "#1a8f69" }]}>
+                    ✅ Tout va bien
+                  </Text>
+                  <Text style={styles.propositionPoints}>
+                    Aucun point ne nécessite de collecte pour le moment.
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  {tourneesUrgentes.map((tu) => (
                     <View
+                      key={tu.id_tournee}
                       style={[
-                        styles.propositionBadge,
-                        { backgroundColor: "#fff" },
+                        styles.propositionCard,
+                        { backgroundColor: "#f3e8fd", borderColor: "#d4b3f5" },
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.propositionBadgeText,
-                          { color: "#7a4a00" },
-                        ]}
-                      >
-                        {pointsPleins.length + pointsMoyens.length} point(s)
+                      <View style={styles.propositionHeader}>
+                        <Text
+                          style={[
+                            styles.propositionTitle,
+                            { color: "#6a1a8b" },
+                          ]}
+                        >
+                          ⚡ Tournée urgente (Admin)
+                        </Text>
+                        <View
+                          style={[
+                            styles.propositionBadge,
+                            { backgroundColor: "#fff" },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.propositionBadgeText,
+                              { color: "#6a1a8b" },
+                            ]}
+                          >
+                            {tu.tournee_point?.length || 0} point(s)
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.propositionPoints}>
+                        {tu.tournee_point
+                          ?.map((tp: any) => tp.point_collecte?.nom)
+                          .join(", ")}
+                        {tu.notes ? ` — ${tu.notes}` : ""}
                       </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.propositionBtn,
+                          { backgroundColor: "#6a1a8b" },
+                        ]}
+                        onPress={() =>
+                          accepterProposition("urgence", tu.id_tournee)
+                        }
+                        disabled={creationLoading}
+                      >
+                        <Text style={styles.propositionBtnText}>
+                          {creationLoading
+                            ? "Chargement..."
+                            : "Accepter cette tournée"}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
-                  </View>
-                  <Text style={styles.propositionPoints}>
-                    {[...pointsPleins, ...pointsMoyens]
-                      .map((p) => p.nom)
-                      .join(", ")}{" "}
-                    — Inclut les points pleins et en remplissage.
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.propositionBtn,
-                      { backgroundColor: "#e8a020" },
-                    ]}
-                    onPress={() => accepterProposition("demain")}
-                    disabled={creationLoading}
-                  >
-                    <Text style={styles.propositionBtnText}>
-                      {creationLoading
-                        ? "Création..."
-                        : "Planifier pour demain"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                  ))}
+
+                  {pointsPleins.length > 0 && (
+                    <View
+                      style={[styles.propositionCard, styles.propositionUrgent]}
+                    >
+                      <View style={styles.propositionHeader}>
+                        <Text
+                          style={[
+                            styles.propositionTitle,
+                            { color: "#8b1a1a" },
+                          ]}
+                        >
+                          🚨 Tournée immédiate
+                        </Text>
+                        <View
+                          style={[
+                            styles.propositionBadge,
+                            { backgroundColor: "#fff" },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.propositionBadgeText,
+                              { color: "#8b1a1a" },
+                            ]}
+                          >
+                            {pointsPleins.length} point(s)
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.propositionPoints}>
+                        {pointsPleins.map((p) => p.nom).join(", ")} — Plein(s),
+                        à vider aujourd&apos;hui.
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.propositionBtn,
+                          { backgroundColor: "#c0392b" },
+                        ]}
+                        onPress={() => accepterProposition("immediate")}
+                        disabled={creationLoading}
+                      >
+                        <Text style={styles.propositionBtnText}>
+                          {creationLoading
+                            ? "Création..."
+                            : "Accepter cette tournée"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  {pointsMoyens.length > 0 && (
+                    <View
+                      style={[styles.propositionCard, styles.propositionDemain]}
+                    >
+                      <View style={styles.propositionHeader}>
+                        <Text
+                          style={[
+                            styles.propositionTitle,
+                            { color: "#7a4a00" },
+                          ]}
+                        >
+                          📅 Tournée demain
+                        </Text>
+                        <View
+                          style={[
+                            styles.propositionBadge,
+                            { backgroundColor: "#fff" },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.propositionBadgeText,
+                              { color: "#7a4a00" },
+                            ]}
+                          >
+                            {pointsPleins.length + pointsMoyens.length} point(s)
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.propositionPoints}>
+                        {[...pointsPleins, ...pointsMoyens]
+                          .map((p) => p.nom)
+                          .join(", ")}{" "}
+                        — Inclut les points pleins et en remplissage.
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.propositionBtn,
+                          { backgroundColor: "#e8a020" },
+                        ]}
+                        onPress={() => accepterProposition("demain")}
+                        disabled={creationLoading}
+                      >
+                        <Text style={styles.propositionBtnText}>
+                          {creationLoading
+                            ? "Création..."
+                            : "Planifier pour demain"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
               )}
             </>
           )}
