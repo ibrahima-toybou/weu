@@ -134,7 +134,6 @@ function Tournees() {
 
     setLoadingUrgence(true);
 
-    // Récupérer l'admin connecté
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -144,42 +143,96 @@ function Tournees() {
       .eq("auth_id", user.id)
       .single();
 
-    // Créer la tournée
-    const { data: tournee, error: tourneeError } = await supabase
+    // Vérifier s'il existe déjà une tournée urgente en attente
+    const { data: tourneeExistante } = await supabase
       .from("tournee")
-      .insert({
-        date: dateUrgence,
-        id_utilisateur: 17, // Hamidou — agent qui effectue la tournée
-        cree_par: adminData.id_utilisateur, // Admin qui a créé la tournée
-        notes: notesUrgence || "Tournée d'urgence créée par l'admin",
-        statut: "en_cours",
-      })
-      .select()
+      .select("*, tournee_point(id_point)")
+      .eq("statut", "en_cours")
+      .eq("acceptee_par_agent", false)
+      .limit(1)
       .single();
 
-    if (tourneeError) {
-      setErrorUrgence("Erreur lors de la création : " + tourneeError.message);
-      setLoadingUrgence(false);
-      return;
-    }
+    let idTournee;
 
-    // Enregistrer les points et vider les pointages
-    for (const idPoint of pointsSelectionnes) {
-      await supabase.from("tournee_point").insert({
-        id_tournee: tournee.id_tournee,
-        id_point: idPoint,
-        heure_vidage: null,
-        nb_pointages_au_vidage: getNbPointages(idPoint),
-      });
+    if (tourneeExistante) {
+      // Réutiliser la tournée existante
+      idTournee = tourneeExistante.id_tournee;
+
+      // Filtrer les points déjà présents dans cette tournée pour éviter les doublons
+      const pointsExistants =
+        tourneeExistante.tournee_point?.map((tp) => tp.id_point) || [];
+      const nouveauxPoints = pointsSelectionnes.filter(
+        (id) => !pointsExistants.includes(id),
+      );
+
+      if (nouveauxPoints.length === 0) {
+        setErrorUrgence(
+          "Ces points sont déjà inclus dans la tournée urgente en attente",
+        );
+        setLoadingUrgence(false);
+        return;
+      }
+
+      // Mettre à jour les notes en ajoutant la nouvelle raison si différente
+      const notesActuelles = tourneeExistante.notes || "";
+      const nouvelleNote = notesUrgence
+        ? notesActuelles.includes(notesUrgence)
+          ? notesActuelles
+          : `${notesActuelles} · ${notesUrgence}`
+        : notesActuelles;
 
       await supabase
-        .from("pointage")
-        .update({ statut_sync: "archivé" })
-        .eq("id_point", idPoint)
-        .eq("statut_sync", "synchronisé");
+        .from("tournee")
+        .update({ notes: nouvelleNote })
+        .eq("id_tournee", idTournee);
+
+      for (const idPoint of nouveauxPoints) {
+        await supabase.from("tournee_point").insert({
+          id_tournee: idTournee,
+          id_point: idPoint,
+          heure_vidage: null,
+          nb_pointages_au_vidage: getNbPointages(idPoint),
+        });
+      }
+
+      setSuccessUrgence(
+        `${nouveauxPoints.length} point(s) ajouté(s) à la tournée urgente existante !`,
+      );
+    } else {
+      // Créer une nouvelle tournée
+      const { data: tournee, error: tourneeError } = await supabase
+        .from("tournee")
+        .insert({
+          date: dateUrgence,
+          id_utilisateur: 17,
+          cree_par: adminData.id_utilisateur,
+          notes: notesUrgence || "Tournée d'urgence créée par l'admin",
+          statut: "en_cours",
+          acceptee_par_agent: false,
+        })
+        .select()
+        .single();
+
+      if (tourneeError) {
+        setErrorUrgence("Erreur lors de la création : " + tourneeError.message);
+        setLoadingUrgence(false);
+        return;
+      }
+
+      idTournee = tournee.id_tournee;
+
+      for (const idPoint of pointsSelectionnes) {
+        await supabase.from("tournee_point").insert({
+          id_tournee: idTournee,
+          id_point: idPoint,
+          heure_vidage: null,
+          nb_pointages_au_vidage: getNbPointages(idPoint),
+        });
+      }
+
+      setSuccessUrgence("Tournée d'urgence créée et envoyée à l'agent !");
     }
 
-    setSuccessUrgence("Tournée d'urgence créée et envoyée à l'agent !");
     setPointsSelectionnes([]);
     setNotesUrgence("");
     setLoadingUrgence(false);
