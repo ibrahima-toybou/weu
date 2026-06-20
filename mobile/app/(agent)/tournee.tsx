@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { supabase } from "../supabase";
@@ -15,11 +16,13 @@ export default function Tournee() {
   const [loading, setLoading] = useState(true);
   const [utilisateur, setUtilisateur] = useState<any>(null);
   const [tournee, setTournee] = useState<any>(null);
-  const [pointsAVider, setPointsAVider] = useState<any[]>([]);
-  const [pointsVides, setPointsVides] = useState<number[]>([]);
+  const [pointsTournee, setPointsTournee] = useState<any[]>([]);
   const [validationLoading, setValidationLoading] = useState<number | null>(
     null,
   );
+  const [tourneesArchivees, setTourneesArchivees] = useState<any[]>([]);
+  const [tourneeDetailSelectionnee, setTourneeDetailSelectionnee] =
+    useState<any>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -46,62 +49,29 @@ export default function Tournee() {
 
     setUtilisateur(utilisateurData);
 
-    // Récupérer la dernière tournée non terminée (du jour ou future, sans tous les points validés)
-    const aujourdhui = new Date().toISOString().split("T")[0];
-
-    const { data: tourneesData } = await supabase
+    // Tournée en cours et acceptée par l'agent
+    const { data: tourneeActiveData } = await supabase
       .from("tournee")
-      .select("*")
+      .select("*, tournee_point(*, point_collecte(nom, secteur(nom)))")
       .eq("id_utilisateur", utilisateurData.id_utilisateur)
-      .gte("date", aujourdhui)
-      .order("date", { ascending: true })
-      .limit(1);
+      .eq("statut", "en_cours")
+      .eq("acceptee_par_agent", true)
+      .limit(1)
+      .single();
 
-    const tourneeActive = tourneesData?.[0] || null;
-    setTournee(tourneeActive);
+    setTournee(tourneeActiveData || null);
+    setPointsTournee(tourneeActiveData?.tournee_point || []);
 
-    if (tourneeActive) {
-      // Récupérer les points déjà validés pour cette tournée
-      const { data: tourneePointsData } = await supabase
-        .from("tournee_point")
-        .select("id_point")
-        .eq("id_tournee", tourneeActive.id_tournee);
+    // Tournées archivées (terminées)
+    const { data: archiveesData } = await supabase
+      .from("tournee")
+      .select("*, tournee_point(*, point_collecte(nom, secteur(nom)))")
+      .eq("id_utilisateur", utilisateurData.id_utilisateur)
+      .eq("statut", "terminée")
+      .order("date", { ascending: false })
+      .limit(10);
 
-      const idsValides = tourneePointsData?.map((tp) => tp.id_point) || [];
-      setPointsVides(idsValides);
-
-      // Si la tournée vient d'être créée, on doit déterminer quels points elle concerne
-      // On stocke ça en se basant sur les points actuellement pleins/moyens au moment de la création
-      // Pour simplifier : on récupère tous les points et leur statut actuel
-      const [pointsRes, pointagesRes, menagesRes] = await Promise.all([
-        supabase.from("point_collecte").select("*, secteur(nom)").order("nom"),
-        supabase
-          .from("pointage")
-          .select("id_point")
-          .eq("statut_sync", "synchronisé"),
-        supabase.from("menage").select("id_point").eq("statut", "actif"),
-      ]);
-
-      const points = pointsRes.data || [];
-      const pointages = pointagesRes.data || [];
-      const menages = menagesRes.data || [];
-
-      function getPct(idPoint: number) {
-        const nb = pointages.filter((p) => p.id_point === idPoint).length;
-        const nm = menages.filter((m) => m.id_point === idPoint).length;
-        if (nm === 0) return 0;
-        return Math.min(Math.round((nb / nm) * 100), 100);
-      }
-
-      // Les points concernés sont ceux à >= 60% (logique de proposition) OU déjà dans tournee_point
-      const pointsConcernes = points
-        .filter(
-          (p) => getPct(p.id_point) >= 60 || idsValides.includes(p.id_point),
-        )
-        .map((p) => ({ ...p, pct: getPct(p.id_point) }));
-
-      setPointsAVider(pointsConcernes);
-    }
+    setTourneesArchivees(archiveesData || []);
 
     setLoading(false);
   }
@@ -117,18 +87,15 @@ export default function Tournee() {
 
     const nbPointages = pointagesData?.length || 0;
 
-    const { error: insertError } = await supabase.from("tournee_point").insert({
-      id_tournee: tournee.id_tournee,
-      id_point: idPoint,
-      heure_vidage: new Date().toISOString(),
-      nb_pointages_au_vidage: nbPointages,
-    });
-
-    if (insertError) {
-      Alert.alert("Erreur", insertError.message);
-      setValidationLoading(null);
-      return;
-    }
+    // Mettre à jour la ligne tournee_point existante avec heure_vidage
+    await supabase
+      .from("tournee_point")
+      .update({
+        heure_vidage: new Date().toISOString(),
+        nb_pointages_au_vidage: nbPointages,
+      })
+      .eq("id_tournee", tournee.id_tournee)
+      .eq("id_point", idPoint);
 
     await supabase
       .from("pointage")
@@ -136,8 +103,63 @@ export default function Tournee() {
       .eq("id_point", idPoint)
       .eq("statut_sync", "synchronisé");
 
-    setPointsVides((prev) => [...prev, idPoint]);
+    // Vérifier si tous les points sont maintenant vidés
+    const { data: pointsRestants } = await supabase
+      .from("tournee_point")
+      .select("id_point, heure_vidage")
+      .eq("id_tournee", tournee.id_tournee);
+
+    const tousVides = pointsRestants?.every((p) => p.heure_vidage !== null);
+
+    if (tousVides) {
+      await supabase
+        .from("tournee")
+        .update({ statut: "terminée" })
+        .eq("id_tournee", tournee.id_tournee);
+    }
+
     setValidationLoading(null);
+    fetchData();
+  }
+
+  async function retirerPoint(idPoint: number, nomPoint: string) {
+    Alert.alert(
+      "Retirer ce point",
+      `Voulez-vous retirer "${nomPoint}" de cette tournée ? Il sera réintégré dans les prochaines propositions.`,
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Retirer",
+          style: "destructive",
+          onPress: async () => {
+            await supabase
+              .from("tournee_point")
+              .delete()
+              .eq("id_tournee", tournee.id_tournee)
+              .eq("id_point", idPoint);
+
+            // Vérifier s'il reste des points NON vidés
+            const { data: pointsRestants } = await supabase
+              .from("tournee_point")
+              .select("id_point, heure_vidage")
+              .eq("id_tournee", tournee.id_tournee);
+
+            const aucunPointNonVide = !pointsRestants?.some(
+              (p) => p.heure_vidage === null,
+            );
+
+            if (aucunPointNonVide) {
+              await supabase
+                .from("tournee")
+                .update({ statut: "terminée" })
+                .eq("id_tournee", tournee.id_tournee);
+            }
+
+            fetchData();
+          },
+        },
+      ],
+    );
   }
 
   function getDateLabel(date: string) {
@@ -153,9 +175,8 @@ export default function Tournee() {
     });
   }
 
-  const tousValides =
-    pointsAVider.length > 0 &&
-    pointsAVider.every((p) => pointsVides.includes(p.id_point));
+  const pointsValides = pointsTournee.filter((p) => p.heure_vidage !== null);
+  const pointsRestants = pointsTournee.filter((p) => p.heure_vidage === null);
 
   if (loading) {
     return (
@@ -179,9 +200,9 @@ export default function Tournee() {
           {!tournee ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyIcon}>🚛</Text>
-              <Text style={styles.emptyTitle}>Aucune tournée prévue</Text>
+              <Text style={styles.emptyTitle}>Aucune tournée en cours</Text>
               <Text style={styles.emptyText}>
-                Rendez-vous sur l’accueil pour accepter une proposition de
+                Rendez-vous sur l'accueil pour accepter une proposition de
                 tournée.
               </Text>
             </View>
@@ -199,7 +220,7 @@ export default function Tournee() {
                       color: "#1a5c99",
                     }}
                   >
-                    {pointsVides.length}/{pointsAVider.length} validés
+                    {pointsValides.length}/{pointsTournee.length} validés
                   </Text>
                 </View>
                 {tournee.notes && (
@@ -209,11 +230,11 @@ export default function Tournee() {
 
               <Text style={styles.cardLabel}>Points à vider</Text>
 
-              {pointsAVider.map((p) => {
-                const estValide = pointsVides.includes(p.id_point);
+              {pointsTournee.map((tp) => {
+                const estValide = tp.heure_vidage !== null;
                 return (
                   <View
-                    key={p.id_point}
+                    key={tp.id_point}
                     style={[
                       styles.pointCard,
                       estValide && styles.pointCardDone,
@@ -232,8 +253,12 @@ export default function Tournee() {
                       </Text>
                     </View>
                     <View style={styles.pointContent}>
-                      <Text style={styles.pointNom}>{p.nom}</Text>
-                      <Text style={styles.pointSecteur}>{p.secteur?.nom}</Text>
+                      <Text style={styles.pointNom}>
+                        {tp.point_collecte?.nom}
+                      </Text>
+                      <Text style={styles.pointSecteur}>
+                        {tp.point_collecte?.secteur?.nom}
+                      </Text>
                       <Text
                         style={[
                           styles.pointStatus,
@@ -242,7 +267,7 @@ export default function Tournee() {
                           },
                         ]}
                       >
-                        {estValide ? "Vidé" : `${p.pct}% rempli`}
+                        {estValide ? "Vidé" : "À vider"}
                       </Text>
                     </View>
                     {estValide ? (
@@ -250,21 +275,40 @@ export default function Tournee() {
                         <Text style={styles.valideBadgeText}>Fait</Text>
                       </View>
                     ) : (
-                      <TouchableOpacity
-                        style={styles.validerBtn}
-                        onPress={() => validerPoint(p.id_point)}
-                        disabled={validationLoading === p.id_point}
-                      >
-                        <Text style={styles.validerBtnText}>
-                          {validationLoading === p.id_point ? "..." : "Valider"}
-                        </Text>
-                      </TouchableOpacity>
+                      <View style={{ gap: 6 }}>
+                        <TouchableOpacity
+                          style={styles.validerBtn}
+                          onPress={() => validerPoint(tp.id_point)}
+                          disabled={validationLoading === tp.id_point}
+                        >
+                          <Text style={styles.validerBtnText}>
+                            {validationLoading === tp.id_point
+                              ? "..."
+                              : "Valider"}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() =>
+                            retirerPoint(tp.id_point, tp.point_collecte?.nom)
+                          }
+                        >
+                          <Text
+                            style={{
+                              fontSize: 11,
+                              color: "#c0392b",
+                              textAlign: "center",
+                            }}
+                          >
+                            Retirer
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
                     )}
                   </View>
                 );
               })}
 
-              {tousValides && (
+              {pointsRestants.length === 0 && pointsTournee.length > 0 && (
                 <View
                   style={[
                     styles.card,
@@ -299,8 +343,159 @@ export default function Tournee() {
               )}
             </>
           )}
+
+          {/* Tournées archivées */}
+          {tourneesArchivees.length > 0 && (
+            <>
+              <Text style={[styles.cardLabel, { marginTop: 16 }]}>
+                Tournées archivées
+              </Text>
+              {tourneesArchivees.map((t, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.card}
+                  onPress={() => setTourneeDetailSelectionnee(t)}
+                >
+                  <View style={styles.tourneeHeader}>
+                    <Text style={styles.tourneeDate}>
+                      {new Date(t.date).toLocaleDateString("fr-FR", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "700",
+                        color: "#1a8f69",
+                      }}
+                    >
+                      {t.tournee_point?.length || 0} point(s)
+                    </Text>
+                  </View>
+                  {t.notes && (
+                    <Text style={styles.tourneeNotes}>{t.notes}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
         </View>
       </ScrollView>
+
+      {/* MODAL DETAIL TOURNEE ARCHIVEE */}
+      <Modal
+        visible={tourneeDetailSelectionnee !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setTourneeDetailSelectionnee(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            justifyContent: "flex-end",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#fff",
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: 24,
+              paddingBottom: 40,
+              maxHeight: "70%",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "800",
+                color: "#0d1f16",
+                marginBottom: 4,
+              }}
+            >
+              Tournée du{" "}
+              {tourneeDetailSelectionnee &&
+                new Date(tourneeDetailSelectionnee.date).toLocaleDateString(
+                  "fr-FR",
+                )}
+            </Text>
+            {tourneeDetailSelectionnee?.notes && (
+              <Text
+                style={{ fontSize: 13, color: "#7a9c8a", marginBottom: 16 }}
+              >
+                {tourneeDetailSelectionnee.notes}
+              </Text>
+            )}
+            <ScrollView style={{ maxHeight: 300 }}>
+              {tourneeDetailSelectionnee?.tournee_point?.map(
+                (tp: any, i: number) => (
+                  <View
+                    key={i}
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      paddingVertical: 10,
+                      borderBottomWidth: 1,
+                      borderBottomColor: "#f0f4f9",
+                    }}
+                  >
+                    <View>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: "600",
+                          color: "#0d1f16",
+                        }}
+                      >
+                        {tp.point_collecte?.nom}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: "#7a9c8a" }}>
+                        {tp.point_collecte?.secteur?.nom}
+                      </Text>
+                    </View>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: "#1a8f69",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {tp.heure_vidage
+                        ? new Date(tp.heure_vidage).toLocaleTimeString(
+                            "fr-FR",
+                            { hour: "2-digit", minute: "2-digit" },
+                          )
+                        : "—"}
+                    </Text>
+                  </View>
+                ),
+              )}
+            </ScrollView>
+            <TouchableOpacity
+              style={{
+                backgroundColor: "#f4f8fc",
+                borderRadius: 12,
+                padding: 14,
+                alignItems: "center",
+                marginTop: 12,
+                borderWidth: 1,
+                borderColor: "#e0eaf5",
+              }}
+              onPress={() => setTourneeDetailSelectionnee(null)}
+            >
+              <Text
+                style={{ fontSize: 14, fontWeight: "600", color: "#4a6a58" }}
+              >
+                Fermer
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
