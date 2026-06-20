@@ -35,6 +35,7 @@ export default function HistoriqueAgent() {
       .from("tournee")
       .select("*, tournee_point(*, point_collecte(nom))")
       .eq("id_utilisateur", utilisateur?.id_utilisateur)
+      .eq("statut", "terminée")
       .order("date", { ascending: false })
       .limit(20);
 
