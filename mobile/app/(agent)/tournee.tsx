@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Modal,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../supabase";
 import { styles } from "./tournee.styles";
 
@@ -20,9 +20,6 @@ export default function Tournee() {
   const [validationLoading, setValidationLoading] = useState<number | null>(
     null,
   );
-  const [tourneesArchivees, setTourneesArchivees] = useState<any[]>([]);
-  const [tourneeDetailSelectionnee, setTourneeDetailSelectionnee] =
-    useState<any>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -49,7 +46,6 @@ export default function Tournee() {
 
     setUtilisateur(utilisateurData);
 
-    // Tournée en cours et acceptée par l'agent
     const { data: tourneeActiveData } = await supabase
       .from("tournee")
       .select("*, tournee_point(*, point_collecte(nom, secteur(nom)))")
@@ -61,17 +57,6 @@ export default function Tournee() {
 
     setTournee(tourneeActiveData || null);
     setPointsTournee(tourneeActiveData?.tournee_point || []);
-
-    // Tournées archivées (terminées)
-    const { data: archiveesData } = await supabase
-      .from("tournee")
-      .select("*, tournee_point(*, point_collecte(nom, secteur(nom)))")
-      .eq("id_utilisateur", utilisateurData.id_utilisateur)
-      .eq("statut", "terminée")
-      .order("date", { ascending: false })
-      .limit(10);
-
-    setTourneesArchivees(archiveesData || []);
 
     setLoading(false);
   }
@@ -87,7 +72,6 @@ export default function Tournee() {
 
     const nbPointages = pointagesData?.length || 0;
 
-    // Mettre à jour la ligne tournee_point existante avec heure_vidage
     await supabase
       .from("tournee_point")
       .update({
@@ -103,7 +87,6 @@ export default function Tournee() {
       .eq("id_point", idPoint)
       .eq("statut_sync", "synchronisé");
 
-    // Vérifier si tous les points sont maintenant vidés
     const { data: pointsRestants } = await supabase
       .from("tournee_point")
       .select("id_point, heure_vidage")
@@ -138,7 +121,6 @@ export default function Tournee() {
               .eq("id_tournee", tournee.id_tournee)
               .eq("id_point", idPoint);
 
-            // Vérifier s'il reste des points NON vidés
             const { data: pointsRestants } = await supabase
               .from("tournee_point")
               .select("id_point, heure_vidage")
@@ -199,7 +181,12 @@ export default function Tournee() {
         <View style={styles.body}>
           {!tournee ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyIcon}>🚛</Text>
+              <Ionicons
+                name="car-outline"
+                size={40}
+                color="#7a9c8a"
+                style={{ marginBottom: 12 }}
+              />
               <Text style={styles.emptyTitle}>Aucune tournée en cours</Text>
               <Text style={styles.emptyText}>
                 Rendez-vous sur l'accueil pour accepter une proposition de
@@ -248,9 +235,11 @@ export default function Tournee() {
                         },
                       ]}
                     >
-                      <Text style={{ fontSize: 20 }}>
-                        {estValide ? "✅" : "🗑️"}
-                      </Text>
+                      <Ionicons
+                        name={estValide ? "checkmark-circle" : "trash"}
+                        size={22}
+                        color={estValide ? "#1a8f69" : "#c0392b"}
+                      />
                     </View>
                     <View style={styles.pointContent}>
                       <Text style={styles.pointNom}>
@@ -319,7 +308,12 @@ export default function Tournee() {
                     },
                   ]}
                 >
-                  <Text style={{ fontSize: 32, marginBottom: 8 }}>🎉</Text>
+                  <Ionicons
+                    name="trophy"
+                    size={32}
+                    color="#1a8f69"
+                    style={{ marginBottom: 8 }}
+                  />
                   <Text
                     style={{
                       fontSize: 15,
@@ -343,159 +337,8 @@ export default function Tournee() {
               )}
             </>
           )}
-
-          {/* Tournées archivées */}
-          {tourneesArchivees.length > 0 && (
-            <>
-              <Text style={[styles.cardLabel, { marginTop: 16 }]}>
-                Tournées archivées
-              </Text>
-              {tourneesArchivees.map((t, i) => (
-                <TouchableOpacity
-                  key={i}
-                  style={styles.card}
-                  onPress={() => setTourneeDetailSelectionnee(t)}
-                >
-                  <View style={styles.tourneeHeader}>
-                    <Text style={styles.tourneeDate}>
-                      {new Date(t.date).toLocaleDateString("fr-FR", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </Text>
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        fontWeight: "700",
-                        color: "#1a8f69",
-                      }}
-                    >
-                      {t.tournee_point?.length || 0} point(s)
-                    </Text>
-                  </View>
-                  {t.notes && (
-                    <Text style={styles.tourneeNotes}>{t.notes}</Text>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </>
-          )}
         </View>
       </ScrollView>
-
-      {/* MODAL DETAIL TOURNEE ARCHIVEE */}
-      <Modal
-        visible={tourneeDetailSelectionnee !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setTourneeDetailSelectionnee(null)}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            justifyContent: "flex-end",
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: "#fff",
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              padding: 24,
-              paddingBottom: 40,
-              maxHeight: "70%",
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: "800",
-                color: "#0d1f16",
-                marginBottom: 4,
-              }}
-            >
-              Tournée du{" "}
-              {tourneeDetailSelectionnee &&
-                new Date(tourneeDetailSelectionnee.date).toLocaleDateString(
-                  "fr-FR",
-                )}
-            </Text>
-            {tourneeDetailSelectionnee?.notes && (
-              <Text
-                style={{ fontSize: 13, color: "#7a9c8a", marginBottom: 16 }}
-              >
-                {tourneeDetailSelectionnee.notes}
-              </Text>
-            )}
-            <ScrollView style={{ maxHeight: 300 }}>
-              {tourneeDetailSelectionnee?.tournee_point?.map(
-                (tp: any, i: number) => (
-                  <View
-                    key={i}
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      paddingVertical: 10,
-                      borderBottomWidth: 1,
-                      borderBottomColor: "#f0f4f9",
-                    }}
-                  >
-                    <View>
-                      <Text
-                        style={{
-                          fontSize: 13,
-                          fontWeight: "600",
-                          color: "#0d1f16",
-                        }}
-                      >
-                        {tp.point_collecte?.nom}
-                      </Text>
-                      <Text style={{ fontSize: 11, color: "#7a9c8a" }}>
-                        {tp.point_collecte?.secteur?.nom}
-                      </Text>
-                    </View>
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        color: "#1a8f69",
-                        fontWeight: "600",
-                      }}
-                    >
-                      {tp.heure_vidage
-                        ? new Date(tp.heure_vidage).toLocaleTimeString(
-                            "fr-FR",
-                            { hour: "2-digit", minute: "2-digit" },
-                          )
-                        : "—"}
-                    </Text>
-                  </View>
-                ),
-              )}
-            </ScrollView>
-            <TouchableOpacity
-              style={{
-                backgroundColor: "#f4f8fc",
-                borderRadius: 12,
-                padding: 14,
-                alignItems: "center",
-                marginTop: 12,
-                borderWidth: 1,
-                borderColor: "#e0eaf5",
-              }}
-              onPress={() => setTourneeDetailSelectionnee(null)}
-            >
-              <Text
-                style={{ fontSize: 14, fontWeight: "600", color: "#4a6a58" }}
-              >
-                Fermer
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
