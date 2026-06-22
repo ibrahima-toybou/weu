@@ -8,6 +8,7 @@ import {
   Modal,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../supabase";
 import { styles } from "./finances.styles";
 
@@ -15,29 +16,33 @@ const CATEGORIES = [
   {
     key: "carburant",
     label: "Carburant",
-    icon: "⛽",
+    icon: "speedometer" as const,
     color: "#fdf0e0",
+    iconColor: "#e8a020",
     barColor: "#e8a020",
   },
   {
     key: "salaire",
     label: "Salaire",
-    icon: "💼",
+    icon: "briefcase" as const,
     color: "#e5f1fd",
+    iconColor: "#1a5c99",
     barColor: "#1a5c99",
   },
   {
     key: "maintenance",
     label: "Maintenance",
-    icon: "🔧",
+    icon: "build" as const,
     color: "#f4faf7",
+    iconColor: "#7a9c8a",
     barColor: "#7a9c8a",
   },
   {
     key: "autre",
     label: "Autre",
-    icon: "📦",
+    icon: "ellipsis-horizontal-circle" as const,
     color: "#f4faf7",
+    iconColor: "#9b8aa6",
     barColor: "#9b8aa6",
   },
 ];
@@ -221,7 +226,7 @@ export default function Finances() {
                   <View
                     style={[styles.catIcon, { backgroundColor: cat.color }]}
                   >
-                    <Text style={{ fontSize: 18 }}>{cat.icon}</Text>
+                    <Ionicons name={cat.icon} size={18} color={cat.iconColor} />
                   </View>
                   <View style={styles.catContent}>
                     <Text style={styles.catNom}>{cat.label}</Text>
@@ -237,7 +242,7 @@ export default function Finances() {
                   <Text style={styles.catMontant}>
                     {total > 0 ? `-${total.toLocaleString("fr-FR")}` : "0"}
                   </Text>
-                  <Text style={styles.catArrow}>›</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#c0ddd0" />
                 </TouchableOpacity>
               );
             })}
@@ -245,14 +250,24 @@ export default function Finances() {
 
           {/* Info */}
           <View style={styles.infoCard}>
-            <Text style={styles.infoTitle}>
-              💡 À quoi servent vos cotisations ?
-            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 6,
+              }}
+            >
+              <Ionicons name="bulb" size={18} color="#0d6349" />
+              <Text style={styles.infoTitle}>
+                À quoi servent vos cotisations ?
+              </Text>
+            </View>
             <Text style={styles.infoText}>
               Vos cotisations financent directement la collecte des déchets du
               quartier : le carburant du camion de collecte, le salaire de
-              l’agent de terrain, et l’entretien du matériel et des points de
-              collecte.
+              l&apos;agent de terrain, et l&apos;entretien du matériel et des
+              points de collecte.
             </Text>
           </View>
         </View>
@@ -267,9 +282,18 @@ export default function Finances() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {catInfo?.icon} {catInfo?.label}
-            </Text>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
+              {catInfo && (
+                <Ionicons
+                  name={catInfo.icon}
+                  size={20}
+                  color={catInfo.iconColor}
+                />
+              )}
+              <Text style={styles.modalTitle}>{catInfo?.label}</Text>
+            </View>
             <Text style={styles.modalSub}>
               Détail des dépenses — {moisLabel}
             </Text>
