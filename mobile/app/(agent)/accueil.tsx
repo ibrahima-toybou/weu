@@ -8,6 +8,7 @@ import {
   Alert,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../supabase";
 import { styles } from "./accueil.styles";
 
@@ -59,7 +60,6 @@ export default function AccueilAgent() {
     setPointages(pointagesRes.data || []);
     setMenages(menagesRes.data || []);
 
-    // Vérifier s'il y a déjà une tournée en cours acceptée
     const { data: tourneeEnCoursData } = await supabase
       .from("tournee")
       .select("*")
@@ -71,7 +71,6 @@ export default function AccueilAgent() {
 
     setTourneeEnCours(tourneeEnCoursData || null);
 
-    // Toutes les tournées urgentes créées par l'admin, pas encore acceptées
     const { data: tourneesAdminData } = await supabase
       .from("tournee")
       .select("*, tournee_point(*, point_collecte(nom, secteur(nom)))")
@@ -197,7 +196,7 @@ export default function AccueilAgent() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.headerGreeting}>Bonjour 👋</Text>
+            <Text style={styles.headerGreeting}>Bonjour</Text>
             <Text style={styles.headerName}>{utilisateur?.nom}</Text>
             <Text style={styles.headerSub}>Agent de terrain · Madina</Text>
           </View>
@@ -212,12 +211,22 @@ export default function AccueilAgent() {
         <View style={styles.body}>
           {tourneeEnCours ? (
             <View style={[styles.propositionCard, styles.propositionVide]}>
-              <Text style={[styles.propositionTitle, { color: "#1a8f69" }]}>
-                🚛 Tournée en cours
-              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 4,
+                }}
+              >
+                <Ionicons name="car" size={18} color="#1a8f69" />
+                <Text style={[styles.propositionTitle, { color: "#1a8f69" }]}>
+                  Tournée en cours
+                </Text>
+              </View>
               <Text style={styles.propositionPoints}>
-                Vous avez déjà une tournée en cours. Rendez-vous dans l'onglet
-                Tournée pour continuer.
+                Vous avez déjà une tournée en cours. Rendez-vous dans
+                l&apos;onglet Tournée pour continuer.
               </Text>
               <TouchableOpacity
                 style={[styles.propositionBtn, { backgroundColor: "#1a8f69" }]}
@@ -234,9 +243,25 @@ export default function AccueilAgent() {
               pointsMoyens.length === 0 &&
               tourneesUrgentes.length === 0 ? (
                 <View style={[styles.propositionCard, styles.propositionVide]}>
-                  <Text style={[styles.propositionTitle, { color: "#1a8f69" }]}>
-                    ✅ Tout va bien
-                  </Text>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={18}
+                      color="#1a8f69"
+                    />
+                    <Text
+                      style={[styles.propositionTitle, { color: "#1a8f69" }]}
+                    >
+                      Tout va bien
+                    </Text>
+                  </View>
                   <Text style={styles.propositionPoints}>
                     Aucun point ne nécessite de collecte pour le moment.
                   </Text>
@@ -252,14 +277,23 @@ export default function AccueilAgent() {
                       ]}
                     >
                       <View style={styles.propositionHeader}>
-                        <Text
-                          style={[
-                            styles.propositionTitle,
-                            { color: "#6a1a8b" },
-                          ]}
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
                         >
-                          ⚡ Tournée urgente (Admin)
-                        </Text>
+                          <Ionicons name="flash" size={18} color="#6a1a8b" />
+                          <Text
+                            style={[
+                              styles.propositionTitle,
+                              { color: "#6a1a8b" },
+                            ]}
+                          >
+                            Tournée urgente (Admin)
+                          </Text>
+                        </View>
                         <View
                           style={[
                             styles.propositionBadge,
@@ -306,14 +340,23 @@ export default function AccueilAgent() {
                       style={[styles.propositionCard, styles.propositionUrgent]}
                     >
                       <View style={styles.propositionHeader}>
-                        <Text
-                          style={[
-                            styles.propositionTitle,
-                            { color: "#8b1a1a" },
-                          ]}
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
                         >
-                          🚨 Tournée immédiate
-                        </Text>
+                          <Ionicons name="alert" size={18} color="#8b1a1a" />
+                          <Text
+                            style={[
+                              styles.propositionTitle,
+                              { color: "#8b1a1a" },
+                            ]}
+                          >
+                            Tournée immédiate
+                          </Text>
+                        </View>
                         <View
                           style={[
                             styles.propositionBadge,
@@ -356,14 +399,23 @@ export default function AccueilAgent() {
                       style={[styles.propositionCard, styles.propositionDemain]}
                     >
                       <View style={styles.propositionHeader}>
-                        <Text
-                          style={[
-                            styles.propositionTitle,
-                            { color: "#7a4a00" },
-                          ]}
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
                         >
-                          📅 Tournée demain
-                        </Text>
+                          <Ionicons name="calendar" size={18} color="#7a4a00" />
+                          <Text
+                            style={[
+                              styles.propositionTitle,
+                              { color: "#7a4a00" },
+                            ]}
+                          >
+                            Tournée demain
+                          </Text>
+                        </View>
                         <View
                           style={[
                             styles.propositionBadge,
@@ -407,7 +459,6 @@ export default function AccueilAgent() {
             </>
           )}
 
-          {/* État des points */}
           <View style={[styles.card, { marginTop: 8 }]}>
             <Text style={styles.cardLabel}>État des points de collecte</Text>
             {points.map((p, i) => {
