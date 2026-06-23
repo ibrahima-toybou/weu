@@ -12,8 +12,6 @@ function Dashboard() {
   const [menages, setMenages] = useState([]);
   const [cotisations, setCotisations] = useState([]);
   const [depenses, setDepenses] = useState([]);
-  const [derniersPointages, setDerniersPointages] = useState([]);
-  const [dernieresTournees, setDernieresTournees] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -22,48 +20,26 @@ function Dashboard() {
   async function fetchData() {
     setLoading(true);
 
-    const [
-      pointsRes,
-      pointagesRes,
-      menagesRes,
-      cotisationsRes,
-      depensesRes,
-      derniersPointagesRes,
-      dernieresTourneesRes,
-    ] = await Promise.all([
-      supabase.from("point_collecte").select("*, secteur(nom)").order("nom"),
-      supabase
-        .from("pointage")
-        .select("id_point")
-        .eq("statut_sync", "synchronisé"),
-      supabase.from("menage").select("id_point").eq("statut", "actif"),
-      supabase
-        .from("cotisation")
-        .select("montant, periode, statut")
-        .eq("statut", "payé"),
-      supabase.from("depense").select("montant, date"),
-      supabase
-        .from("pointage")
-        .select("*, menage(nom), point_collecte(nom)")
-        .eq("statut_sync", "synchronisé")
-        .order("date_heure", { ascending: false })
-        .limit(6),
-      supabase
-        .from("tournee")
-        .select("*, agent:id_utilisateur(nom)")
-        .order("date", { ascending: false })
-        .limit(6),
-    ]);
+    const [pointsRes, pointagesRes, menagesRes, cotisationsRes, depensesRes] =
+      await Promise.all([
+        supabase.from("point_collecte").select("*, secteur(nom)").order("nom"),
+        supabase
+          .from("pointage")
+          .select("id_point")
+          .eq("statut_sync", "synchronisé"),
+        supabase.from("menage").select("id_point").eq("statut", "actif"),
+        supabase
+          .from("cotisation")
+          .select("montant, periode, statut")
+          .eq("statut", "payé"),
+        supabase.from("depense").select("montant, date"),
+      ]);
 
     if (!pointsRes.error) setPoints(pointsRes.data);
     if (!pointagesRes.error) setPointages(pointagesRes.data);
     if (!menagesRes.error) setMenages(menagesRes.data);
     if (!cotisationsRes.error) setCotisations(cotisationsRes.data);
     if (!depensesRes.error) setDepenses(depensesRes.data);
-    if (!derniersPointagesRes.error)
-      setDerniersPointages(derniersPointagesRes.data);
-    if (!dernieresTourneesRes.error)
-      setDernieresTournees(dernieresTourneesRes.data);
     setLoading(false);
   }
 
@@ -108,40 +84,6 @@ function Dashboard() {
     year: "numeric",
   });
 
-  function formatTemps(d) {
-    if (!d) return "—";
-    return (
-      new Date(d).toLocaleDateString("fr-FR", {
-        day: "numeric",
-        month: "short",
-      }) +
-      " à " +
-      new Date(d).toLocaleTimeString("fr-FR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    );
-  }
-
-  const activite = [
-    ...derniersPointages.map((p) => ({
-      type: "pointage",
-      titre: `${p.menage?.nom || "Ménage"} a déposé au ${p.point_collecte?.nom || "point"}`,
-      temps: p.date_heure,
-      emoji: "🏠",
-      bg: "#e8f8f0",
-    })),
-    ...dernieresTournees.map((t) => ({
-      type: "tournee",
-      titre: `Tournée par ${t.agent?.nom || "agent"}`,
-      temps: t.date,
-      emoji: "🚛",
-      bg: "#e8f0fd",
-    })),
-  ]
-    .sort((a, b) => new Date(b.temps) - new Date(a.temps))
-    .slice(0, 8);
-
   return (
     <Layout>
       <div className={styles.page}>
@@ -179,6 +121,7 @@ function Dashboard() {
               <div className={styles.kpiSub}>familles inscrites</div>
             </div>
           </div>
+
           <div className={styles.kpiCard}>
             <div
               className={styles.kpiIconWrap}
@@ -199,6 +142,7 @@ function Dashboard() {
               </div>
             </div>
           </div>
+
           <div className={styles.kpiCard}>
             <div
               className={styles.kpiIconWrap}
@@ -225,6 +169,7 @@ function Dashboard() {
               </div>
             </div>
           </div>
+
           <div className={styles.kpiCard}>
             <div
               className={styles.kpiIconWrap}
@@ -289,12 +234,22 @@ function Dashboard() {
                             <div className={styles.ptNom}>{p.nom}</div>
                             <div className={styles.ptSec}>{p.secteur?.nom}</div>
                           </td>
-                          <td className={styles.ptTd}>{nbMenages}</td>
+                          <td className={styles.ptTd}>
+                            <span className={styles.menageBadge}>
+                              {nbMenages}
+                            </span>
+                          </td>
                           <td className={styles.ptTd}>
                             <div className={styles.barWrap}>
                               <div className={styles.barTrack}>
                                 <div
-                                  className={`${styles.barFill} ${statut === "plein" ? styles.fillPlein : statut === "moyen" ? styles.fillMoyen : styles.fillVide}`}
+                                  className={`${styles.barFill} ${
+                                    statut === "plein"
+                                      ? styles.fillPlein
+                                      : statut === "moyen"
+                                        ? styles.fillMoyen
+                                        : styles.fillVide
+                                  }`}
                                   style={{ width: `${pct}%` }}
                                 />
                               </div>
@@ -315,7 +270,13 @@ function Dashboard() {
                           </td>
                           <td className={styles.ptTd}>
                             <span
-                              className={`${styles.chip} ${statut === "plein" ? styles.chipPlein : statut === "moyen" ? styles.chipMoyen : styles.chipVide}`}
+                              className={`${styles.chip} ${
+                                statut === "plein"
+                                  ? styles.chipPlein
+                                  : statut === "moyen"
+                                    ? styles.chipMoyen
+                                    : styles.chipVide
+                              }`}
                             >
                               {statut === "plein"
                                 ? "● Plein"
@@ -336,14 +297,18 @@ function Dashboard() {
             <div className={styles.card}>
               <div className={styles.cardHead}>
                 <span className={styles.cardTitle}>Alertes</span>
+                <span style={{ fontSize: 11, color: "#7a9c8a" }}>
+                  {pointsPleins.length + pointsMoyens.length} point(s) à
+                  surveiller
+                </span>
               </div>
               <div className={styles.alertesList}>
                 {pointsPleins.length === 0 &&
                   pointsMoyens.length === 0 &&
                   solde >= 0 && (
                     <div className={styles.alerteEmpty}>
-                      <ion-icon name="checkmark"></ion-icon> Tout est sous
-                      contrôle
+                      <ion-icon name="checkmark-circle"></ion-icon> Tout est
+                      sous contrôle
                     </div>
                   )}
                 {pointsPleins.length > 0 && (
@@ -426,7 +391,6 @@ function Dashboard() {
                         Votre solde du mois est excédentaire
                       </div>
                     </div>
-                    <span className={styles.alerteArrow}>›</span>
                   </div>
                 )}
                 {solde < 0 && (
@@ -438,7 +402,7 @@ function Dashboard() {
                       className={styles.alerteIconWrap}
                       style={{ background: "#fdecea" }}
                     >
-                      💸
+                      <ion-icon name="trending-down"></ion-icon>
                     </div>
                     <div className={styles.alerteContent}>
                       <div className={styles.alerteT}>Solde négatif</div>
@@ -451,45 +415,6 @@ function Dashboard() {
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Activité récente */}
-          <div className={styles.card}>
-            <div className={styles.cardHead}>
-              <span className={styles.cardTitle}>Activité récente</span>
-              <span style={{ fontSize: 12, color: "#7a9c8a" }}>
-                {activite.length} événements
-              </span>
-            </div>
-            {loading ? (
-              <div className={styles.loading}>Chargement...</div>
-            ) : (
-              <div className={styles.activiteGrid}>
-                {activite.length === 0 ? (
-                  <div className={styles.activiteEmpty}>
-                    Aucune activité récente
-                  </div>
-                ) : (
-                  activite.map((a, i) => (
-                    <div key={i} className={styles.activiteItem}>
-                      <div
-                        className={styles.activiteIconWrap}
-                        style={{ background: a.bg }}
-                      >
-                        {a.emoji}
-                      </div>
-                      <div className={styles.activiteContent}>
-                        <div className={styles.activiteTitle}>{a.titre}</div>
-                        <div className={styles.activiteTime}>
-                          {formatTemps(a.temps)}
-                        </div>
-                      </div>
-                      <span className={styles.activiteArrow}>›</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>
