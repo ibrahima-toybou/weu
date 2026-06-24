@@ -22,6 +22,10 @@ const NAV = [
     section: "Finances",
     items: [{ path: "/finances", label: "Finances", icon: "wallet" }],
   },
+  {
+    section: "Compte",
+    items: [{ path: "/parametres", label: "Paramètres", icon: "settings" }],
+  },
 ];
 
 function Layout({ children }) {
@@ -41,36 +45,34 @@ function Layout({ children }) {
           <div className={styles.logoIcon}>
             <ion-icon name="leaf"></ion-icon>
           </div>
-          <div>
+          <div className={styles.logoText}>
             <div className={styles.logoName}>Weu</div>
-            <div className={styles.logoSub}>Administration · Madina</div>
+            <div className={styles.logoSub}>Admin · Madina</div>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className={styles.nav}>
-          {NAV.map((group) => (
-            <div key={group.section}>
-              <div className={styles.navSection}>{group.section}</div>
-              {group.items.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <button
-                    key={item.path}
-                    onClick={() => navigate(item.path)}
-                    className={`${styles.navBtn} ${isActive ? styles.navBtnActive : ""}`}
-                  >
-                    <ion-icon
-                      name={isActive ? item.icon : `${item.icon}-outline`}
-                      className={styles.navIcon}
-                    ></ion-icon>
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </nav>
+        {NAV.map((group) => (
+          <div key={group.section}>
+            <div className={styles.navSection}>{group.section}</div>
+            {group.items.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className={`${styles.navBtn} ${isActive ? styles.navBtnActive : ""}`}
+                >
+                  <ion-icon
+                    name={isActive ? item.icon : `${item.icon}-outline`}
+                    className={styles.navIcon}
+                  ></ion-icon>
+                  <span className={styles.navLabel}>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        ))}
 
         {/* Footer */}
         <div className={styles.footer}>
@@ -79,7 +81,7 @@ function Layout({ children }) {
               name="log-out-outline"
               className={styles.navIcon}
             ></ion-icon>
-            Déconnexion
+            <span className={styles.navLabel}>Déconnexion</span>
           </button>
         </div>
       </aside>
