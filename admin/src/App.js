@@ -8,6 +8,7 @@ import Cotisations from "./pages/Cotisations";
 import Points from "./pages/Points";
 import Tournees from "./pages/Tournees";
 import Finances from "./pages/Finances";
+import Parametres from "./pages/Parametres";
 
 function App() {
   useEffect(() => {
@@ -35,6 +36,7 @@ function App() {
         <Route path="/points" element={<Points />} />
         <Route path="/tournees" element={<Tournees />} />
         <Route path="/finances" element={<Finances />} />
+        <Route path="/parametres" element={<Parametres />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
