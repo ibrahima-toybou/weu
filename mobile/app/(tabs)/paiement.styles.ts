@@ -1,136 +1,160 @@
 import { StyleSheet } from "react-native";
+import { colors, fonts, radius, shadow } from "../theme";
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f4faf7",
+    backgroundColor: "#F4F5F8",
   },
   loadingWrap: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f4faf7",
+    backgroundColor: "#F4F5F8",
   },
 
-  // HEADER
-  header: {
-    backgroundColor: "#1a8f69",
-    paddingHorizontal: 24,
-    paddingTop: 56,
-    paddingBottom: 24,
+  headerTitle: {
+    fontFamily: fonts.heading,
+    fontSize: 26,
+    color: "#FFFFFF",
+    letterSpacing: -0.3,
+  },
+  headerSub: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: "rgba(255,255,255,0.78)",
+    marginTop: 4,
+  },
+
+  body: {
+    padding: 18,
+    gap: 14,
+  },
+
+  statsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  statBox: {
+    flex: 1,
+    alignItems: "center",
+    padding: 14,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
+  statBoxVal: {
+    fontFamily: fonts.heading,
+    fontSize: 24,
+    lineHeight: 26,
+  },
+  statBoxLabel: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 3,
+  },
+
+  moisNav: {
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-between",
+    ...shadow.card,
   },
-  backBtn: {
+  moisNavBtn: {
     width: 36,
     height: 36,
-    borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: radius.full,
+    backgroundColor: colors.bgPage,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  backText: {
-    fontSize: 18,
-    color: "#fff",
-    fontWeight: "600",
+  moisLabel: {
+    fontFamily: fonts.headingSemiBold,
+    fontSize: 16,
+    color: colors.textPrimary,
+    textTransform: "capitalize",
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#fff",
-    letterSpacing: -0.3,
-  },
-
-  // BODY
-  body: {
-    padding: 16,
-    gap: 12,
+  moisSub: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.red,
+    marginTop: 2,
+    textAlign: "center",
   },
 
-  // CARD
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 18,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.xl,
     padding: 18,
     borderWidth: 1,
-    borderColor: "#e0f0e8",
-    shadowColor: "#0d6349",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    marginBottom: 12,
+    borderColor: colors.border,
+    ...shadow.card,
   },
   cardLabel: {
+    fontFamily: fonts.body,
     fontSize: 10,
-    fontWeight: "700",
-    color: "#7a9c8a",
+    color: colors.textLabel,
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    marginBottom: 10,
+    marginBottom: 12,
   },
 
-  // INFO ROW
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f8f4",
+    borderBottomColor: colors.borderLight,
   },
   infoLabel: {
+    fontFamily: fonts.body,
     fontSize: 13,
-    color: "#7a9c8a",
+    color: colors.textSecondary,
   },
   infoVal: {
+    fontFamily: fonts.bodySemiBold,
     fontSize: 13,
-    fontWeight: "600",
-    color: "#0d1f16",
+    color: colors.textPrimary,
   },
   infoValGreen: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#0d6349",
-  },
-  infoValRed: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#c0392b",
+    fontFamily: fonts.heading,
+    fontSize: 16,
+    color: colors.teal,
   },
 
-  // STATUT BADGE
   statutBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
+    paddingVertical: 6,
+    borderRadius: radius.full,
     alignSelf: "flex-start",
-    marginTop: 8,
+    marginTop: 10,
   },
   statutText: {
+    fontFamily: fonts.bodySemiBold,
     fontSize: 12,
-    fontWeight: "700",
   },
 
-  // BOUTONS PAIEMENT
   btnMobile: {
-    backgroundColor: "#1a5c99",
-    borderRadius: 14,
-    padding: 18,
     alignItems: "center",
     flexDirection: "row",
     justifyContent: "center",
     gap: 10,
-    marginBottom: 10,
   },
   btnMobileText: {
-    color: "#fff",
+    fontFamily: fonts.bodySemiBold,
     fontSize: 15,
-    fontWeight: "700",
-  },
-  btnMobileIcon: {
-    fontSize: 20,
+    color: "#0E1210",
   },
 
   separateur: {
@@ -142,56 +166,76 @@ export const styles = StyleSheet.create({
   separateurLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#e0f0e8",
+    backgroundColor: colors.borderLight,
   },
   separateurText: {
+    fontFamily: fonts.body,
     fontSize: 12,
-    color: "#7a9c8a",
+    color: colors.textLabel,
   },
 
   cashCard: {
-    backgroundColor: "#f4faf7",
-    borderRadius: 14,
+    backgroundColor: colors.bgPage,
+    borderRadius: radius.lg,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#e0f0e8",
+    borderColor: colors.border,
     alignItems: "center",
+    gap: 6,
   },
   cashTitle: {
+    fontFamily: fonts.bodySemiBold,
     fontSize: 13,
-    fontWeight: "600",
-    color: "#4a6a58",
-    marginBottom: 6,
+    color: colors.textPrimary,
   },
   cashDesc: {
+    fontFamily: fonts.body,
     fontSize: 12,
-    color: "#7a9c8a",
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 18,
   },
 
-  // DÉJÀ PAYÉ
   dejaPaye: {
-    backgroundColor: "#e6f5ec",
-    borderRadius: 14,
+    borderRadius: radius.lg,
     padding: 20,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#b8ddc8",
-    marginBottom: 12,
-  },
-  dejaPayeIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+    gap: 4,
   },
   dejaPayeTitle: {
+    fontFamily: fonts.headingSemiBold,
     fontSize: 16,
-    fontWeight: "700",
-    color: "#0d6349",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   dejaPayeDate: {
+    fontFamily: fonts.body,
     fontSize: 12,
-    color: "#4a6a58",
+    color: colors.textSecondary,
+  },
+
+  moisItem: {
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.lg,
+    padding: 14,
+    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  moisItemSelected: {
+    backgroundColor: "rgba(45,212,191,0.08)",
+    borderColor: colors.teal,
+  },
+  moisItemLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
+  moisItemLabelSelected: {
+    fontFamily: fonts.bodySemiBold,
+    color: colors.tealDark,
   },
 });
