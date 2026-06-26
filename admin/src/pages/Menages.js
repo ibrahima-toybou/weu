@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
 import { supabase } from "../supabase";
 import styles from "./Menages.module.css";
+import Select from "../components/Select";
 
 function Menages() {
   const [success, setSuccess] = useState("");
@@ -12,14 +13,12 @@ function Menages() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Formulaire
   const [nom, setNom] = useState("");
   const [telephone, setTelephone] = useState("");
   const [secteurId, setSecteurId] = useState("");
   const [pointId, setPointId] = useState("");
   const [email, setEmail] = useState("");
 
-  // Filtres
   const [filtreStatut, setFiltreStatut] = useState("tous");
   const [filtreSecteur, setFiltreSecteur] = useState("tous");
   const [recherche, setRecherche] = useState("");
@@ -30,10 +29,9 @@ function Menages() {
 
   useEffect(() => {
     if (secteurId) {
-      const filtered = points.filter(
-        (p) => p.id_secteur === parseInt(secteurId),
+      setPointsFiltres(
+        points.filter((p) => p.id_secteur === parseInt(secteurId)),
       );
-      setPointsFiltres(filtered);
       setPointId("");
     } else {
       setPointsFiltres([]);
@@ -66,7 +64,6 @@ function Menages() {
       return;
     }
 
-    // Générer un mot de passe temporaire
     const motDePasseTemp =
       "Weu" + Math.random().toString(36).slice(2, 8).toUpperCase();
 
@@ -85,16 +82,13 @@ function Menages() {
       try {
         const errBody = await error.context?.json();
         const msgAnglais = errBody?.error || "";
-
         let msgFrancais = "Erreur lors de la création";
-        if (msgAnglais.includes("already been registered")) {
+        if (msgAnglais.includes("already been registered"))
           msgFrancais = "Cet email est déjà utilisé par un autre ménage";
-        } else if (msgAnglais.includes("invalid email")) {
+        else if (msgAnglais.includes("invalid email"))
           msgFrancais = "Adresse email invalide";
-        } else if (msgAnglais.includes("password")) {
+        else if (msgAnglais.includes("password"))
           msgFrancais = "Problème avec le mot de passe";
-        }
-
         setError(msgFrancais);
       } catch {
         setError("Erreur lors de la création");
@@ -107,7 +101,7 @@ function Menages() {
       return;
     }
 
-    setSuccess("Ménage créé avec succès ! Un email a été envoyé à la famille.");
+    setSuccess("Ménage créé avec succès !");
     setNom("");
     setTelephone("");
     setSecteurId("");
@@ -142,136 +136,152 @@ function Menages() {
   return (
     <Layout>
       <div className={styles.page}>
-        <div className={styles.title}>Gestion des ménages</div>
-        <div className={styles.sub}>
-          Quartier Madina · {total} ménages inscrits
-        </div>
-
-        {/* KPIs */}
-        <div className={styles.kpiGrid}>
-          <div className={styles.kpi}>
-            <div className={styles.kpiLabel}>Total</div>
-            <div className={styles.kpiVal} style={{ color: "#0d6349" }}>
-              {total}
-            </div>
-            <div className={styles.kpiSub}>ménages inscrits</div>
-          </div>
-          <div className={styles.kpi}>
-            <div className={styles.kpiLabel}>Actifs</div>
-            <div className={styles.kpiVal} style={{ color: "#1a8f69" }}>
-              {actifs}
-            </div>
-            <div className={styles.kpiSub}>ménages actifs</div>
-          </div>
-          <div className={styles.kpi}>
-            <div className={styles.kpiLabel}>Inactifs</div>
-            <div className={styles.kpiVal} style={{ color: "#7a9c8a" }}>
-              {inactifs}
-            </div>
-            <div className={styles.kpiSub}>ménages inactifs</div>
-          </div>
-          <div className={styles.kpi}>
-            <div className={styles.kpiLabel}>Secteurs</div>
-            <div className={styles.kpiVal} style={{ color: "#1a5c99" }}>
-              {secteurs.length}
-            </div>
-            <div className={styles.kpiSub}>secteurs actifs</div>
+        <div className={styles.pageHeader}>
+          <div className={styles.title}>Gestion des ménages</div>
+          <div className={styles.sub}>
+            Quartier Madina · {total} ménages inscrits
           </div>
         </div>
 
-        {/* Formulaire création */}
-        <div className={styles.card}>
-          <div className={styles.cardHead}>
-            <span className={styles.cardTitle}>Créer un nouveau ménage</span>
-          </div>
-          <form onSubmit={handleCreer}>
-            {error && <div className={styles.alertError}>{error}</div>}
-            {success && <div className={styles.alertSuccess}>{success}</div>}
-            <div className={styles.formGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Nom du ménage *</label>
-                <input
-                  className={styles.input}
-                  placeholder="ex: Famille Ahmed"
-                  value={nom}
-                  onChange={(e) => setNom(e.target.value)}
-                />
+        {/* GRID HAUT : formulaire + stats */}
+        <div className={styles.gridTop}>
+          {/* Formulaire */}
+          <div className={styles.cardNoMargin}>
+            <div className={styles.cardHead}>
+              <span className={styles.cardTitle}>Créer un nouveau ménage</span>
+            </div>
+            <form onSubmit={handleCreer}>
+              {error && <div className={styles.alertError}>{error}</div>}
+              {success && <div className={styles.alertSuccess}>{success}</div>}
+              <div className={styles.formGrid}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Nom du ménage *</label>
+                  <input
+                    className={styles.input}
+                    placeholder="ex: Famille Ahmed"
+                    value={nom}
+                    onChange={(e) => setNom(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Téléphone</label>
+                  <input
+                    className={styles.input}
+                    placeholder="+269 XX XX XX XX"
+                    value={telephone}
+                    onChange={(e) => setTelephone(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Email *</label>
+                  <input
+                    className={styles.input}
+                    type="email"
+                    placeholder="email@exemple.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Secteur *</label>
+                  <Select
+                    value={secteurId}
+                    onChange={(e) => setSecteurId(e.target.value)}
+                    placeholder="Sélectionner un secteur..."
+                    options={[
+                      ...secteurs.map((s) => ({
+                        value: String(s.id_secteur),
+                        label: s.nom,
+                      })),
+                    ]}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Point de collecte *</label>
+                  <Select
+                    value={pointId}
+                    onChange={(e) => setPointId(e.target.value)}
+                    placeholder="Sélectionner un point..."
+                    disabled={!secteurId}
+                    options={[
+                      ...pointsFiltres.map((p) => ({
+                        value: String(p.id_point),
+                        label: p.nom,
+                      })),
+                    ]}
+                  />
+                </div>
               </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Téléphone</label>
-                <input
-                  className={styles.input}
-                  placeholder="+269 XX XX XX XX"
-                  value={telephone}
-                  onChange={(e) => setTelephone(e.target.value)}
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Email *</label>
-                <input
-                  className={styles.input}
-                  type="email"
-                  placeholder="email@exemple.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Secteur *</label>
-                <select
-                  className={styles.input}
-                  value={secteurId}
-                  onChange={(e) => setSecteurId(e.target.value)}
+              <div className={styles.formFooter}>
+                <button
+                  type="button"
+                  className={styles.btnOutline}
+                  onClick={() => {
+                    setNom("");
+                    setTelephone("");
+                    setSecteurId("");
+                    setPointId("");
+                    setEmail("");
+                    setError("");
+                    setSuccess("");
+                  }}
                 >
-                  <option value="">Sélectionner un secteur...</option>
-                  {secteurs.map((s) => (
-                    <option key={s.id_secteur} value={s.id_secteur}>
-                      {s.nom}
-                    </option>
-                  ))}
-                </select>
+                  Annuler
+                </button>
+                <button type="submit" className={styles.btnGreen}>
+                  Créer le ménage
+                </button>
               </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Point de collecte *</label>
-                <select
-                  className={styles.input}
-                  value={pointId}
-                  onChange={(e) => setPointId(e.target.value)}
-                  disabled={!secteurId}
-                >
-                  <option value="">Sélectionner un point...</option>
-                  {pointsFiltres.map((p) => (
-                    <option key={p.id_point} value={p.id_point}>
-                      {p.nom}
-                    </option>
-                  ))}
-                </select>
+            </form>
+          </div>
+
+          {/* Stats */}
+          <div className={styles.cardNoMargin}>
+            <div className={styles.cardHead}>
+              <span className={styles.cardTitle}>Vue d'ensemble</span>
+            </div>
+            <div className={styles.statsBox}>
+              <div className={styles.statItem}>
+                <div>
+                  <div className={styles.statLabel}>Total</div>
+                  <div className={styles.statSub}>ménages inscrits</div>
+                </div>
+                <div className={styles.statVal} style={{ color: "#1B1F2B" }}>
+                  {total}
+                </div>
+              </div>
+              <div className={styles.statItem}>
+                <div>
+                  <div className={styles.statLabel}>Actifs</div>
+                  <div className={styles.statSub}>participent au projet</div>
+                </div>
+                <div className={styles.statVal} style={{ color: "#2DD4BF" }}>
+                  {actifs}
+                </div>
+              </div>
+              <div className={styles.statItem}>
+                <div>
+                  <div className={styles.statLabel}>Inactifs</div>
+                  <div className={styles.statSub}>désactivés</div>
+                </div>
+                <div className={styles.statVal} style={{ color: "#FB7185" }}>
+                  {inactifs}
+                </div>
+              </div>
+              <div className={styles.statItem}>
+                <div>
+                  <div className={styles.statLabel}>Secteurs</div>
+                  <div className={styles.statSub}>zones couvertes</div>
+                </div>
+                <div className={styles.statVal} style={{ color: "#FBBF24" }}>
+                  {secteurs.length}
+                </div>
               </div>
             </div>
-            <div className={styles.formFooter}>
-              <button
-                type="button"
-                className={styles.btnOutline}
-                onClick={() => {
-                  setNom("");
-                  setTelephone("");
-                  setSecteurId("");
-                  setPointId("");
-                  setEmail("");
-                  setError("");
-                  setSuccess("");
-                }}
-              >
-                Annuler
-              </button>
-              <button type="submit" className={styles.btnGreen}>
-                ✓ Créer le ménage
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
 
-        {/* Liste */}
+        {/* Liste des ménages */}
         <div className={styles.card}>
           <div className={styles.cardHead}>
             <span className={styles.cardTitle}>Liste des ménages</span>
@@ -286,27 +296,27 @@ function Menages() {
               value={recherche}
               onChange={(e) => setRecherche(e.target.value)}
             />
-            <select
-              className={styles.select}
+            <Select
               value={filtreSecteur}
               onChange={(e) => setFiltreSecteur(e.target.value)}
-            >
-              <option value="tous">Tous les secteurs</option>
-              {secteurs.map((s) => (
-                <option key={s.id_secteur} value={s.id_secteur}>
-                  {s.nom}
-                </option>
-              ))}
-            </select>
-            <select
-              className={styles.select}
+              options={[
+                { value: "tous", label: "Tous les secteurs" },
+                ...secteurs.map((s) => ({
+                  value: String(s.id_secteur),
+                  label: s.nom,
+                })),
+              ]}
+            />
+
+            <Select
               value={filtreStatut}
               onChange={(e) => setFiltreStatut(e.target.value)}
-            >
-              <option value="tous">Tous les statuts</option>
-              <option value="actif">Actifs</option>
-              <option value="inactif">Inactifs</option>
-            </select>
+              options={[
+                { value: "tous", label: "Tous les statuts" },
+                { value: "actif", label: "Actifs" },
+                { value: "inactif", label: "Inactifs" },
+              ]}
+            />
           </div>
           {loading ? (
             <div className={styles.tdLoading}>Chargement...</div>
