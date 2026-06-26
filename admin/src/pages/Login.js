@@ -1,12 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabase";
+import styles from "./Login.module.css";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [emailFocus, setEmailFocus] = useState(false);
+  const [pwFocus, setPwFocus] = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
 
   async function handleLogin(e) {
@@ -14,12 +19,8 @@ function Login() {
     setLoading(true);
     setError("");
 
-    // 1. Connexion via Supabase Auth
     const { data: authData, error: authError } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      await supabase.auth.signInWithPassword({ email, password });
 
     if (authError) {
       setError("Email ou mot de passe incorrect");
@@ -27,7 +28,6 @@ function Login() {
       return;
     }
 
-    // 2. Récupérer le rôle dans notre table utilisateur
     const { data: userData, error: userError } = await supabase
       .from("utilisateur")
       .select("role, nom")
@@ -40,7 +40,6 @@ function Login() {
       return;
     }
 
-    // 3. Redirection selon le rôle
     if (userData.role === "super_admin") {
       navigate("/dashboard");
     } else {
@@ -52,156 +51,209 @@ function Login() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(160deg, #d6f0e6, #f4faf7)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontFamily: "DM Sans, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 16,
-          padding: "40px 36px",
-          width: 380,
-          boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
-          border: "1px solid #c0ddd0",
-        }}
-      >
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div
-            style={{
-              width: 54,
-              height: 54,
-              background: "#1a8f69",
-              borderRadius: 15,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 26,
-              margin: "0 auto 12px",
-            }}
-          >
-            🌿
+    <div className={styles.page}>
+      <div className={styles.card}>
+        {/* PANNEAU GAUCHE — MARQUE */}
+        <div className={styles.brand}>
+          <div className={styles.brandBubble1} />
+          <div className={styles.brandBubble2} />
+
+          <div className={styles.brandTop}>
+            <div className={styles.logoTile}>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#FFFFFF"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M11 20C7 20 4 17 4 13c0-1.6.5-3 1.3-4.2C8 12 11 13 12 16c0-4 2-7 6-9.5C18.6 8 19 10 19 12c0 4.5-3.5 8-8 8z" />
+              </svg>
+            </div>
+            <span className={styles.logoText}>Weu</span>
           </div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: "#0d6349" }}>
-            Weu
+
+          <div className={styles.brandMiddle}>
+            <div className={styles.brandSurtitle}>Espace administration</div>
+            <h1 className={styles.brandTitle}>
+              Pilotez la collecte
+              <br />
+              de votre quartier.
+            </h1>
+            <p className={styles.brandDesc}>
+              Ménages, cotisations et points de collecte — tout au même endroit,
+              en temps réel.
+            </p>
           </div>
-          <div style={{ fontSize: 13, color: "#7a9c8a", marginTop: 4 }}>
-            Administration - Madina
+
+          <div className={styles.brandFooter}>
+            <span className={styles.brandDot} />
+            Quartier Madina · Plateforme Weu
           </div>
         </div>
 
-        {/* Formulaire */}
-        <form
-          onSubmit={handleLogin}
-          style={{ display: "flex", flexDirection: "column", gap: 14 }}
-        >
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#4a6a58",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-              }}
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="votre@email.com"
-              required
-              style={{
-                width: "100%",
-                marginTop: 6,
-                border: "1px solid #c0ddd0",
-                borderRadius: 8,
-                padding: "10px 12px",
-                fontSize: 14,
-                fontFamily: "inherit",
-                outline: "none",
-                background: "#f4faf7",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
+        {/* PANNEAU DROIT — FORMULAIRE */}
+        <div className={styles.form}>
+          <h2 className={styles.formTitle}>Connexion</h2>
+          <p className={styles.formSub}>
+            Accédez à votre tableau de bord administrateur.
+          </p>
 
-          <div>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#4a6a58",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-              }}
-            >
-              Mot de passe
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              style={{
-                width: "100%",
-                marginTop: 6,
-                border: "1px solid #c0ddd0",
-                borderRadius: 8,
-                padding: "10px 12px",
-                fontSize: 14,
-                fontFamily: "inherit",
-                outline: "none",
-                background: "#f4faf7",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-
-          {error && (
+          <form onSubmit={handleLogin}>
+            {/* EMAIL */}
+            <label className={styles.fieldLabel}>Email</label>
             <div
-              style={{
-                background: "#fdecea",
-                border: "1px solid #f5b3b3",
-                borderRadius: 8,
-                padding: "10px 14px",
-                fontSize: 13,
-                color: "#8b1a1a",
-              }}
+              className={`${styles.fieldWrap} ${emailFocus ? styles.fieldWrapFocus : ""}`}
             >
-              {error}
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#9AA0B0"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="5" width="18" height="14" rx="2.5" />
+                <path d="M4 7l8 5 8-5" />
+              </svg>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="votre@email.com"
+                required
+                className={styles.input}
+                onFocus={() => setEmailFocus(true)}
+                onBlur={() => setEmailFocus(false)}
+              />
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              background: loading ? "#9fd4be" : "#1a8f69",
-              color: "#fff",
-              border: "none",
-              borderRadius: 10,
-              padding: "12px",
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: loading ? "not-allowed" : "pointer",
-              fontFamily: "inherit",
-              marginTop: 4,
-            }}
-          >
-            {loading ? "Connexion..." : "Se connecter"}
-          </button>
-        </form>
+            {/* MOT DE PASSE */}
+            <label className={styles.fieldLabel}>Mot de passe</label>
+            <div
+              className={`${styles.fieldWrap} ${pwFocus ? styles.fieldWrapFocus : ""}`}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#9AA0B0"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="4" y="10" width="16" height="11" rx="2.5" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+              </svg>
+              <input
+                type={showPw ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className={styles.input}
+                onFocus={() => setPwFocus(true)}
+                onBlur={() => setPwFocus(false)}
+              />
+              <button
+                type="button"
+                className={styles.eyeBtn}
+                onClick={() => setShowPw(!showPw)}
+              >
+                {showPw ? (
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94" />
+                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+                    <circle cx="12" cy="12" r="2.8" />
+                  </svg>
+                )}
+              </button>
+            </div>
+
+            {/* OPTIONS */}
+            <div className={styles.options}>
+              <label
+                className={styles.remember}
+                onClick={() => setRememberMe(!rememberMe)}
+              >
+                <span
+                  className={`${styles.checkbox} ${rememberMe ? styles.checkboxChecked : ""}`}
+                >
+                  {rememberMe && (
+                    <svg
+                      width="11"
+                      height="11"
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#FFFFFF"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M2 6l3 3 5-5" />
+                    </svg>
+                  )}
+                </span>
+                Se souvenir de moi
+              </label>
+              <button
+                type="button"
+                className={styles.forgotBtn}
+                onClick={() => navigate("/reset-password")}
+              >
+                Mot de passe oublié ?
+              </button>
+            </div>
+
+            {/* ERREUR */}
+            {error && <div className={styles.errorBox}>{error}</div>}
+
+            {/* BOUTON */}
+            <button
+              type="submit"
+              disabled={loading}
+              className={styles.submitBtn}
+            >
+              {loading ? "Connexion..." : "Se connecter"}
+            </button>
+          </form>
+
+          <p className={styles.formFooter}>
+            Besoin d'un accès ?{" "}
+            <button type="button" className={styles.footerBtn}>
+              Contactez l'administrateur
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );
