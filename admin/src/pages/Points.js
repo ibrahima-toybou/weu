@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Layout from "../components/Layout";
 import { supabase } from "../supabase";
+import Select from "../components/Select";
 import styles from "./Points.module.css";
 
 function Points() {
@@ -32,7 +33,6 @@ function Points() {
 
   async function fetchData() {
     setLoading(true);
-
     const [pointsRes, pointagesRes, menagesRes, secteursRes, historiqueRes] =
       await Promise.all([
         supabase.from("point_collecte").select("*, secteur(nom)").order("nom"),
@@ -45,12 +45,12 @@ function Points() {
         supabase
           .from("tournee_point")
           .select(
-            "*, point_collecte(nom, secteur(nom)), tournee(date, utilisateur(nom))",
+            "*, point_collecte(nom, secteur(nom)), tournee(date, statut, utilisateur:id_utilisateur(nom))",
           )
+          .not("heure_vidage", "is", null)
           .order("heure_vidage", { ascending: false })
           .limit(20),
       ]);
-
     if (!pointsRes.error) setPoints(pointsRes.data);
     if (!pointagesRes.error) setPointages(pointagesRes.data);
     if (!menagesRes.error) setMenages(menagesRes.data);
@@ -58,6 +58,7 @@ function Points() {
     if (!historiqueRes.error) setHistorique(historiqueRes.data);
     setLoading(false);
   }
+
   function getNbMenages(idPoint) {
     return menages.filter((m) => m.id_point === idPoint).length;
   }
@@ -92,10 +93,23 @@ function Points() {
 
   function getBadge(statut) {
     if (statut === "plein")
-      return <span className={styles.badgePlein}>🔴 Plein</span>;
+      return (
+        <span className={styles.badgePlein}>
+          <ion-icon name="ellipse" style={{ fontSize: 8 }}></ion-icon> Plein
+        </span>
+      );
     if (statut === "moyen")
-      return <span className={styles.badgeMoyen}>🟠 En remplissage</span>;
-    return <span className={styles.badgeVide}>🟢 Vide</span>;
+      return (
+        <span className={styles.badgeMoyen}>
+          <ion-icon name="ellipse" style={{ fontSize: 8 }}></ion-icon> En
+          remplissage
+        </span>
+      );
+    return (
+      <span className={styles.badgeVide}>
+        <ion-icon name="ellipse" style={{ fontSize: 8 }}></ion-icon> Vide
+      </span>
+    );
   }
 
   async function confirmerVidage() {
@@ -104,47 +118,39 @@ function Points() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    const { data: utilisateur, error: userError } = await supabase
+    const { data: utilisateur } = await supabase
       .from("utilisateur")
       .select("id_utilisateur")
       .eq("auth_id", user.id)
       .single();
 
-    console.log("utilisateur:", utilisateur);
-    console.log("userError:", userError);
-
-    const { data: tournee, error: tourneeError } = await supabase
+    // Créer une tournée terminée (vidage manuel admin)
+    const { data: tournee } = await supabase
       .from("tournee")
       .insert({
         date: new Date().toISOString().split("T")[0],
         id_utilisateur: utilisateur.id_utilisateur,
+        cree_par: utilisateur.id_utilisateur,
+        statut: "terminée",
+        acceptee_par_agent: true,
         notes: `Vidage manuel du point ${pointAVider.nom}`,
       })
       .select()
       .single();
 
-    console.log("tournee:", tournee);
-    console.log("tourneeError:", tourneeError);
-
     if (tournee) {
-      const { error: tourneePointError } = await supabase
-        .from("tournee_point")
-        .insert({
-          id_tournee: tournee.id_tournee,
-          id_point: pointAVider.id_point,
-          heure_vidage: new Date().toISOString(),
-          nb_pointages_au_vidage: getNbPointages(pointAVider.id_point),
-        });
+      await supabase.from("tournee_point").insert({
+        id_tournee: tournee.id_tournee,
+        id_point: pointAVider.id_point,
+        heure_vidage: new Date().toISOString(),
+        nb_pointages_au_vidage: getNbPointages(pointAVider.id_point),
+      });
 
-      console.log("tourneePointError:", tourneePointError);
-
-      const { error: pointageError } = await supabase
+      await supabase
         .from("pointage")
         .update({ statut_sync: "archivé" })
         .eq("id_point", pointAVider.id_point)
         .eq("statut_sync", "synchronisé");
-
-      console.log("pointageError:", pointageError);
     }
 
     setSuccessVidage(`Point ${pointAVider.nom} vidé avec succès !`);
@@ -181,12 +187,13 @@ function Points() {
       fetchData();
     }
   }
+
   function ouvrirPopupPoint(p) {
     setPointSelectionne(p);
     setModeEdition(false);
     setNomEdit(p.nom);
     setAdresseEdit(p.adresse || "");
-    setSecteurEdit(p.id_secteur);
+    setSecteurEdit(String(p.id_secteur));
     setSuccessEdit("");
     setErrorEdit("");
   }
@@ -218,136 +225,190 @@ function Points() {
       fetchData();
     }
   }
-  // KPIs
-  const nbMenagesParPoint = (idPoint) => {
-    return points.find((p) => p.id_point === idPoint)?.nb_menages || 0;
-  };
 
-  const pleins = points.filter((p) => {
-    const nb = getNbPointages(p.id_point);
-    const nbMenages = getNbMenages(p.id_point);
-    if (nbMenages === 0) return false;
-    return (nb / nbMenages) * 100 >= 100;
-  }).length;
-
+  const pleins = points.filter((p) => getStatut(p.id_point) === "plein").length;
+  const moyens = points.filter((p) => getStatut(p.id_point) === "moyen").length;
   const totalPointages = pointages.length;
 
   return (
     <Layout>
       <div className={styles.page}>
-        <div className={styles.title}>Points de collecte</div>
-        <div className={styles.sub}>État en temps réel — Quartier Madina</div>
+        <div className={styles.pageHeader}>
+          <div className={styles.title}>Points de collecte</div>
+          <div className={styles.sub}>État en temps réel — Quartier Madina</div>
+        </div>
 
         {successVidage && (
-          <div className={styles.alertSuccess} style={{ marginBottom: 20 }}>
+          <div className={styles.alertSuccess} style={{ marginBottom: 16 }}>
             {successVidage}
           </div>
         )}
 
-        {/* KPIs */}
-        <div className={styles.kpiGrid}>
-          <div className={styles.kpi}>
-            <div className={styles.kpiLabel}>Points actifs</div>
-            <div className={styles.kpiVal} style={{ color: "#1a8f69" }}>
-              {points.length}
+        {/* GRID HAUT : formulaire + stats */}
+        <div className={styles.gridTop}>
+          {/* Formulaire ajout */}
+          <div className={styles.cardNoMargin}>
+            <div className={styles.cardHead}>
+              <span className={styles.cardTitle}>
+                Ajouter un point de collecte
+              </span>
             </div>
-            <div className={styles.kpiSub}>
-              sur {points.length} opérationnels
-            </div>
-          </div>
-          <div className={styles.kpi}>
-            <div className={styles.kpiLabel}>Points pleins</div>
-            <div className={styles.kpiVal} style={{ color: "#c0392b" }}>
-              {pleins}
-            </div>
-            <div className={styles.kpiSub}>à vider en priorité</div>
-          </div>
-          <div className={styles.kpi}>
-            <div className={styles.kpiLabel}>Pointages totaux</div>
-            <div className={styles.kpiVal} style={{ color: "#0d6349" }}>
-              {totalPointages}
-            </div>
-            <div className={styles.kpiSub}>depuis le dernier vidage</div>
-          </div>
-          <div className={styles.kpi}>
-            <div className={styles.kpiLabel}>Seuil d'alerte</div>
-            <div
-              className={styles.kpiVal}
-              style={{ color: "#e8a020", fontSize: 20, marginTop: 8 }}
-            >
-              60%
-            </div>
-            <div className={styles.kpiSub}>des ménages affectés</div>
-          </div>
-        </div>
-        {/* Formulaire ajout point */}
-        <div className={styles.card}>
-          <div className={styles.cardHead}>
-            <span className={styles.cardTitle}>
-              Ajouter un point de collecte
-            </span>
-          </div>
-          <form onSubmit={handleAjouterPoint}>
-            {errorForm && <div className={styles.alertError}>{errorForm}</div>}
-            {successForm && (
-              <div className={styles.alertSuccessForm}>{successForm}</div>
-            )}
-            <div className={styles.formGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Nom du point *</label>
-                <input
-                  className={styles.input}
-                  placeholder="ex: Place du marché"
-                  value={nomPoint}
-                  onChange={(e) => setNomPoint(e.target.value)}
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Adresse</label>
-                <input
-                  className={styles.input}
-                  placeholder="ex: Rue principale"
-                  value={adressePoint}
-                  onChange={(e) => setAdressePoint(e.target.value)}
-                />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Secteur *</label>
-                <select
-                  className={styles.input}
-                  value={secteurIdPoint}
-                  onChange={(e) => setSecteurIdPoint(e.target.value)}
+            <form onSubmit={handleAjouterPoint}>
+              {errorForm && (
+                <div
+                  className={styles.alertError}
+                  style={{ margin: "14px 24px 0" }}
                 >
-                  <option value="">Sélectionner un secteur...</option>
-                  {secteurs.map((s) => (
-                    <option key={s.id_secteur} value={s.id_secteur}>
-                      {s.nom}
-                    </option>
-                  ))}
-                </select>
+                  {errorForm}
+                </div>
+              )}
+              {successForm && (
+                <div className={styles.alertSuccessForm}>{successForm}</div>
+              )}
+              <div className={styles.formGrid}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Nom du point *</label>
+                  <input
+                    className={styles.input}
+                    placeholder="ex: Place du marché"
+                    value={nomPoint}
+                    onChange={(e) => setNomPoint(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Adresse</label>
+                  <input
+                    className={styles.input}
+                    placeholder="ex: Rue principale"
+                    value={adressePoint}
+                    onChange={(e) => setAdressePoint(e.target.value)}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Secteur *</label>
+                  <Select
+                    value={secteurIdPoint}
+                    onChange={(e) => setSecteurIdPoint(e.target.value)}
+                    placeholder="Sélectionner un secteur..."
+                    options={secteurs.map((s) => ({
+                      value: String(s.id_secteur),
+                      label: s.nom,
+                    }))}
+                  />
+                </div>
+              </div>
+              <div className={styles.formFooter}>
+                <button
+                  type="button"
+                  className={styles.btnOutline}
+                  onClick={() => {
+                    setNomPoint("");
+                    setAdressePoint("");
+                    setSecteurIdPoint("");
+                    setErrorForm("");
+                    setSuccessForm("");
+                  }}
+                >
+                  Annuler
+                </button>
+                <button type="submit" className={styles.btnGreen}>
+                  <ion-icon name="add-outline"></ion-icon>
+                  Ajouter le point
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Stats */}
+          <div className={styles.cardNoMargin}>
+            <div className={styles.cardHead}>
+              <span className={styles.cardTitle}>Vue d'ensemble</span>
+            </div>
+            <div className={styles.statsBox}>
+              <div className={styles.statItem}>
+                <div className={styles.statLeft}>
+                  <div
+                    className={styles.statIconWrap}
+                    style={{ background: "rgba(45,212,191,0.12)" }}
+                  >
+                    <ion-icon
+                      name="location-outline"
+                      style={{ color: "#2DD4BF", fontSize: 18 }}
+                    ></ion-icon>
+                  </div>
+                  <div>
+                    <div className={styles.statLabel}>Points actifs</div>
+                    <div className={styles.statSub}>opérationnels</div>
+                  </div>
+                </div>
+                <div className={styles.statVal} style={{ color: "#2DD4BF" }}>
+                  {points.length}
+                </div>
+              </div>
+              <div className={styles.statItem}>
+                <div className={styles.statLeft}>
+                  <div
+                    className={styles.statIconWrap}
+                    style={{ background: "rgba(251,113,133,0.12)" }}
+                  >
+                    <ion-icon
+                      name="alert-circle-outline"
+                      style={{ color: "#FB7185", fontSize: 18 }}
+                    ></ion-icon>
+                  </div>
+                  <div>
+                    <div className={styles.statLabel}>Points pleins</div>
+                    <div className={styles.statSub}>à vider en priorité</div>
+                  </div>
+                </div>
+                <div className={styles.statVal} style={{ color: "#FB7185" }}>
+                  {pleins}
+                </div>
+              </div>
+              <div className={styles.statItem}>
+                <div className={styles.statLeft}>
+                  <div
+                    className={styles.statIconWrap}
+                    style={{ background: "rgba(251,191,36,0.12)" }}
+                  >
+                    <ion-icon
+                      name="warning-outline"
+                      style={{ color: "#FBBF24", fontSize: 18 }}
+                    ></ion-icon>
+                  </div>
+                  <div>
+                    <div className={styles.statLabel}>En remplissage</div>
+                    <div className={styles.statSub}>à surveiller</div>
+                  </div>
+                </div>
+                <div className={styles.statVal} style={{ color: "#FBBF24" }}>
+                  {moyens}
+                </div>
+              </div>
+              <div className={styles.statItem}>
+                <div className={styles.statLeft}>
+                  <div
+                    className={styles.statIconWrap}
+                    style={{ background: "rgba(52,211,153,0.12)" }}
+                  >
+                    <ion-icon
+                      name="hand-right-outline"
+                      style={{ color: "#34D399", fontSize: 18 }}
+                    ></ion-icon>
+                  </div>
+                  <div>
+                    <div className={styles.statLabel}>Pointages actifs</div>
+                    <div className={styles.statSub}>depuis dernier vidage</div>
+                  </div>
+                </div>
+                <div className={styles.statVal} style={{ color: "#34D399" }}>
+                  {totalPointages}
+                </div>
               </div>
             </div>
-            <div className={styles.formFooter}>
-              <button
-                type="button"
-                className={styles.btnOutline}
-                onClick={() => {
-                  setNomPoint("");
-                  setAdressePoint("");
-                  setSecteurIdPoint("");
-                  setSeuilPoint(60);
-                  setErrorForm("");
-                  setSuccessForm("");
-                }}
-              >
-                Annuler
-              </button>
-              <button type="submit" className={styles.btnGreen}>
-                ✓ Ajouter le point
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
+
         {/* Grille des points */}
         {loading ? (
           <div className={styles.tdLoading}>Chargement...</div>
@@ -388,14 +449,19 @@ function Points() {
                     <strong>{nb}</strong> pointages depuis le dernier vidage
                   </div>
                   <div className={styles.pointMenages}>
-                    👥 <strong>{nbMenages}</strong> ménages affectés
+                    <ion-icon
+                      name="people-outline"
+                      style={{ fontSize: 14 }}
+                    ></ion-icon>
+                    <strong>{nbMenages}</strong> ménages affectés
                   </div>
 
                   <button
                     className={styles.btnDetails}
                     onClick={() => ouvrirPopupPoint(p)}
                   >
-                    🔍 Voir détails / Modifier
+                    <ion-icon name="eye-outline"></ion-icon>
+                    Voir détails / Modifier
                   </button>
 
                   {statut === "plein" && (
@@ -403,16 +469,20 @@ function Points() {
                       className={styles.btnVider}
                       onClick={() => setPointAVider(p)}
                     >
-                      🚛 Marquer comme vidé
+                      <ion-icon name="car-outline"></ion-icon>
+                      Marquer comme vidé
                     </button>
                   )}
                   {statut === "moyen" && (
                     <button className={styles.btnSurveiller}>
-                      ⏳ À surveiller
+                      <ion-icon name="time-outline"></ion-icon>À surveiller
                     </button>
                   )}
                   {statut === "vide" && (
-                    <button className={styles.btnOk}>✓ Pas urgent</button>
+                    <button className={styles.btnOk}>
+                      <ion-icon name="checkmark-outline"></ion-icon>
+                      Pas urgent
+                    </button>
                   )}
                 </div>
               );
@@ -424,7 +494,7 @@ function Points() {
         <div className={styles.card}>
           <div className={styles.cardHead}>
             <span className={styles.cardTitle}>Historique des vidages</span>
-            <span style={{ fontSize: 13, color: "#7a9c8a" }}>
+            <span className={styles.cardCount}>
               {historique.length} vidage(s)
             </span>
           </div>
@@ -436,22 +506,18 @@ function Points() {
                 <th className={styles.th}>Date vidage</th>
                 <th className={styles.th}>Heure</th>
                 <th className={styles.th}>Pointages au vidage</th>
-                <th className={styles.th}>Agent</th>
               </tr>
             </thead>
             <tbody>
               {historique.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className={styles.tdEmpty}>
-                    Aucun vidage enregistré pour l'instant
+                  <td colSpan={5} className={styles.tdEmpty}>
+                    Aucun vidage enregistré
                   </td>
                 </tr>
               ) : (
                 historique.map((h, i) => (
-                  <tr
-                    key={i}
-                    style={{ background: i % 2 === 0 ? "#fff" : "#f9fdf9" }}
-                  >
+                  <tr key={i}>
                     <td className={styles.tdBold}>
                       {h.point_collecte?.nom || "—"}
                     </td>
@@ -472,9 +538,6 @@ function Points() {
                         : "—"}
                     </td>
                     <td className={styles.td}>{h.nb_pointages_au_vidage}</td>
-                    <td className={styles.td}>
-                      {h.tournee?.utilisateur?.nom || "—"}
-                    </td>
                   </tr>
                 ))
               )}
@@ -508,23 +571,19 @@ function Points() {
                 remettre le compteur à zéro et enregistrer une tournée
                 automatiquement.
               </div>
-              <div
-                className={styles.popupInfo}
-                style={{
-                  background: "#fdf0e0",
-                  padding: "10px 14px",
-                  borderRadius: 8,
-                  border: "1px solid #f5d4a0",
-                }}
-              >
-                ⚠️{" "}
+              <div className={styles.alertWarning}>
+                <ion-icon name="warning-outline"></ion-icon>
                 <strong>
                   {getNbPointages(pointAVider.id_point)} pointages
                 </strong>{" "}
                 seront archivés.
               </div>
-              <button className={styles.btnConfirmer} onClick={confirmerVidage}>
-                ✓ Confirmer le vidage
+              <button
+                className={styles.btnConfirmerRed}
+                onClick={confirmerVidage}
+              >
+                <ion-icon name="car-outline"></ion-icon>
+                Confirmer le vidage
               </button>
               <button
                 className={styles.btnAnnuler}
@@ -536,6 +595,7 @@ function Points() {
           </div>
         </div>
       )}
+
       {/* POPUP DETAILS POINT */}
       {pointSelectionne && (
         <div
@@ -557,7 +617,6 @@ function Points() {
                 ✕
               </button>
             </div>
-
             <div className={styles.popupBody}>
               {errorEdit && (
                 <div className={styles.alertError}>{errorEdit}</div>
@@ -568,7 +627,6 @@ function Points() {
 
               {!modeEdition ? (
                 <>
-                  {/* Statistiques */}
                   <div className={styles.popupSection}>Statistiques</div>
                   <div className={styles.popupGrid}>
                     <div className={styles.popupStat}>
@@ -589,18 +647,13 @@ function Points() {
                     </div>
                   </div>
 
-                  {/* Infos */}
                   <div className={styles.popupSection}>Informations</div>
                   <div className={styles.popupInfo}>
                     <strong>Adresse :</strong>{" "}
                     {pointSelectionne.adresse || "Non renseignée"}
                   </div>
                   <div className={styles.popupInfo}>
-                    <strong>Seuil d'alerte :</strong>{" "}
-                    {pointSelectionne.seuil_alerte}%
-                  </div>
-                  <div className={styles.popupInfo}>
-                    <strong>Remplissage actuel :</strong>{" "}
+                    <strong>Remplissage :</strong>{" "}
                     {getNbMenages(pointSelectionne.id_point) > 0
                       ? Math.round(
                           (getNbPointages(pointSelectionne.id_point) /
@@ -615,7 +668,8 @@ function Points() {
                     className={styles.btnConfirmer}
                     onClick={() => setModeEdition(true)}
                   >
-                    ✎ Modifier les informations
+                    <ion-icon name="create-outline"></ion-icon>
+                    Modifier les informations
                   </button>
                   <button
                     className={styles.btnAnnuler}
@@ -626,7 +680,6 @@ function Points() {
                 </>
               ) : (
                 <>
-                  {/* Formulaire modification */}
                   <div className={styles.popupSection}>Modifier le point</div>
                   <form
                     onSubmit={handleModifierPoint}
@@ -654,20 +707,18 @@ function Points() {
                     </div>
                     <div className={styles.formGroup}>
                       <label className={styles.label}>Secteur *</label>
-                      <select
-                        className={styles.input}
+                      <Select
                         value={secteurEdit}
                         onChange={(e) => setSecteurEdit(e.target.value)}
-                      >
-                        {secteurs.map((s) => (
-                          <option key={s.id_secteur} value={s.id_secteur}>
-                            {s.nom}
-                          </option>
-                        ))}
-                      </select>
+                        options={secteurs.map((s) => ({
+                          value: String(s.id_secteur),
+                          label: s.nom,
+                        }))}
+                      />
                     </div>
                     <button type="submit" className={styles.btnConfirmer}>
-                      ✓ Enregistrer les modifications
+                      <ion-icon name="checkmark-outline"></ion-icon>
+                      Enregistrer les modifications
                     </button>
                     <button
                       type="button"
