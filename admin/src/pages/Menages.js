@@ -64,8 +64,24 @@ function Menages() {
       return;
     }
 
-    const motDePasseTemp =
-      "Weu" + Math.random().toString(36).slice(2, 8).toUpperCase();
+    // Validation format email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("L'adresse email n'est pas valide");
+      return;
+    }
+
+    // Vérification email déjà utilisé
+    const { data: emailExistant } = await supabase
+      .from("utilisateur")
+      .select("id_utilisateur")
+      .eq("email", email)
+      .single();
+
+    if (emailExistant) {
+      setError("Cet email est déjà utilisé par un autre ménage");
+      return;
+    }
 
     const { data, error } = await supabase.functions.invoke("creer-menage", {
       body: {
@@ -74,7 +90,6 @@ function Menages() {
         id_secteur: parseInt(secteurId),
         id_point: parseInt(pointId),
         email,
-        mot_de_passe: motDePasseTemp,
       },
     });
 
@@ -87,8 +102,6 @@ function Menages() {
           msgFrancais = "Cet email est déjà utilisé par un autre ménage";
         else if (msgAnglais.includes("invalid email"))
           msgFrancais = "Adresse email invalide";
-        else if (msgAnglais.includes("password"))
-          msgFrancais = "Problème avec le mot de passe";
         setError(msgFrancais);
       } catch {
         setError("Erreur lors de la création");
@@ -101,7 +114,7 @@ function Menages() {
       return;
     }
 
-    setSuccess("Ménage créé avec succès !");
+    setSuccess("Ménage créé ! Un email d'invitation a été envoyé à " + email);
     setNom("");
     setTelephone("");
     setSecteurId("");
@@ -143,7 +156,6 @@ function Menages() {
           </div>
         </div>
 
-        {/* GRID HAUT : formulaire + stats */}
         <div className={styles.gridTop}>
           {/* Formulaire */}
           <div className={styles.cardNoMargin}>
@@ -188,12 +200,10 @@ function Menages() {
                     value={secteurId}
                     onChange={(e) => setSecteurId(e.target.value)}
                     placeholder="Sélectionner un secteur..."
-                    options={[
-                      ...secteurs.map((s) => ({
-                        value: String(s.id_secteur),
-                        label: s.nom,
-                      })),
-                    ]}
+                    options={secteurs.map((s) => ({
+                      value: String(s.id_secteur),
+                      label: s.nom,
+                    }))}
                   />
                 </div>
                 <div className={styles.formGroup}>
@@ -203,12 +213,10 @@ function Menages() {
                     onChange={(e) => setPointId(e.target.value)}
                     placeholder="Sélectionner un point..."
                     disabled={!secteurId}
-                    options={[
-                      ...pointsFiltres.map((p) => ({
-                        value: String(p.id_point),
-                        label: p.nom,
-                      })),
-                    ]}
+                    options={pointsFiltres.map((p) => ({
+                      value: String(p.id_point),
+                      label: p.nom,
+                    }))}
                   />
                 </div>
               </div>
@@ -281,7 +289,7 @@ function Menages() {
           </div>
         </div>
 
-        {/* Liste des ménages */}
+        {/* Liste */}
         <div className={styles.card}>
           <div className={styles.cardHead}>
             <span className={styles.cardTitle}>Liste des ménages</span>
@@ -307,7 +315,6 @@ function Menages() {
                 })),
               ]}
             />
-
             <Select
               value={filtreStatut}
               onChange={(e) => setFiltreStatut(e.target.value)}
