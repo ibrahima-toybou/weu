@@ -16,7 +16,6 @@ function NewPassword() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Supabase intercepte automatiquement le token dans l'URL
     supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" && session) {
         setSessionReady(true);
@@ -42,10 +41,30 @@ function NewPassword() {
 
     if (updateError) {
       setError("Erreur lors de la mise à jour — " + updateError.message);
-    } else {
-      setSuccess(true);
-      setTimeout(() => navigate("/"), 2500);
+      setLoading(false);
+      return;
     }
+
+    // Vérifier le rôle pour rediriger correctement
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const { data: utilisateur } = await supabase
+      .from("utilisateur")
+      .select("role")
+      .eq("auth_id", user.id)
+      .single();
+
+    setSuccess(true);
+
+    if (utilisateur?.role === "super_admin") {
+      // Admin → retour vers login admin
+      setTimeout(() => navigate("/"), 2500);
+    } else {
+      // Habitant → page d'instructions app mobile
+      setTimeout(() => navigate("/reset-confirm"), 2500);
+    }
+
     setLoading(false);
   }
 
@@ -118,9 +137,7 @@ function NewPassword() {
                 </svg>
               </div>
               <h2 className={styles.formTitle}>Mot de passe mis à jour !</h2>
-              <p className={styles.formSub}>
-                Vous allez être redirigé vers la page de connexion…
-              </p>
+              <p className={styles.formSub}>Vous allez être redirigé…</p>
             </div>
           ) : !sessionReady ? (
             <div style={{ textAlign: "center" }}>
