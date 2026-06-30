@@ -27,10 +27,8 @@ function ResetPassword() {
       },
     );
 
-    console.log("Erreur Supabase:", resetError);
-
     if (resetError) {
-      setError("Erreur : " + resetError.message);
+      setError("Erreur lors de l'envoi — vérifiez l'email saisi");
     } else {
       setSuccess(true);
     }
