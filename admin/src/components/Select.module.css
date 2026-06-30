@@ -1,0 +1,105 @@
+.wrap {
+  position: relative;
+  font-family: "Instrument Sans", sans-serif;
+}
+
+.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 10px;
+  background: #f4f5f8;
+  font-family: "Instrument Sans", sans-serif;
+  font-size: 14px;
+  color: #1b1f2b;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.trigger:hover {
+  border-color: rgba(15, 23, 42, 0.2);
+  background: #eff0f3;
+}
+
+.triggerOpen {
+  border-color: #2dd4bf;
+  background: #fff;
+}
+
+.triggerVal {
+  color: #1b1f2b;
+  font-size: 14px;
+}
+
+.triggerPlaceholder {
+  color: #8a90a0;
+  font-size: 14px;
+}
+
+.chevron {
+  width: 16px;
+  height: 16px;
+  color: #8a90a0;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.dropdown {
+  position: fixed;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  z-index: 9999;
+  overflow: hidden;
+  padding: 4px;
+  min-width: 200px;
+}
+
+.option {
+  width: 100%;
+  display: block;
+  padding: 10px 12px;
+  font-family: "Instrument Sans", sans-serif;
+  font-size: 14px;
+  color: #5b6172;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.1s,
+    color 0.1s;
+}
+
+.option:hover {
+  background: rgba(15, 23, 42, 0.04);
+  color: #1b1f2b;
+}
+
+.optionActive {
+  background: rgba(45, 212, 191, 0.12);
+  color: #0e9384;
+  font-weight: 600;
+}
+
+.optionActive:hover {
+  background: rgba(45, 212, 191, 0.18);
+}
