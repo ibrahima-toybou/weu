@@ -12,6 +12,7 @@ function Dashboard() {
   const [menages, setMenages] = useState([]);
   const [cotisations, setCotisations] = useState([]);
   const [depenses, setDepenses] = useState([]);
+  const [tourneesUrgentes, setTourneesUrgentes] = useState([]);
 
   useEffect(() => {
     fetchData();
@@ -19,27 +20,38 @@ function Dashboard() {
 
   async function fetchData() {
     setLoading(true);
-
-    const [pointsRes, pointagesRes, menagesRes, cotisationsRes, depensesRes] =
-      await Promise.all([
-        supabase.from("point_collecte").select("*, secteur(nom)").order("nom"),
-        supabase
-          .from("pointage")
-          .select("id_point")
-          .eq("statut_sync", "synchronisé"),
-        supabase.from("menage").select("id_point").eq("statut", "actif"),
-        supabase
-          .from("cotisation")
-          .select("montant, periode, statut")
-          .eq("statut", "payé"),
-        supabase.from("depense").select("montant, date"),
-      ]);
-
+    const [
+      pointsRes,
+      pointagesRes,
+      menagesRes,
+      cotisationsRes,
+      depensesRes,
+      tourneesUrgentesRes,
+    ] = await Promise.all([
+      supabase.from("point_collecte").select("*, secteur(nom)").order("nom"),
+      supabase
+        .from("pointage")
+        .select("id_point")
+        .eq("statut_sync", "synchronisé"),
+      supabase.from("menage").select("id_point").eq("statut", "actif"),
+      supabase
+        .from("cotisation")
+        .select("montant, periode, statut")
+        .eq("statut", "payé"),
+      supabase.from("depense").select("montant, date"),
+      supabase
+        .from("tournee")
+        .select("id_tournee")
+        .eq("statut", "en_cours")
+        .eq("acceptee_par_agent", false),
+    ]);
     if (!pointsRes.error) setPoints(pointsRes.data);
     if (!pointagesRes.error) setPointages(pointagesRes.data);
     if (!menagesRes.error) setMenages(menagesRes.data);
     if (!cotisationsRes.error) setCotisations(cotisationsRes.data);
     if (!depensesRes.error) setDepenses(depensesRes.data);
+    if (!tourneesUrgentesRes.error)
+      setTourneesUrgentes(tourneesUrgentesRes.data);
     setLoading(false);
   }
 
@@ -75,10 +87,37 @@ function Dashboard() {
   const solde = totalCotisations - totalDepenses;
   const pointsPleins = points.filter((p) => getStatut(p.id_point) === "plein");
   const pointsMoyens = points.filter((p) => getStatut(p.id_point) === "moyen");
+  const pointsOK = points.filter((p) => getStatut(p.id_point) === "vide");
   const totalMenages = menages.length;
 
-  const dateAujourdhui = new Date().toLocaleDateString("fr-FR", {
-    weekday: "long",
+  const totalPoints = points.length || 1;
+
+  let angleStart = 0;
+  const donutSegments = [
+    { count: pointsPleins.length, color: "#FB7185" },
+    { count: pointsMoyens.length, color: "#FBBF24" },
+    { count: pointsOK.length, color: "#34D399" },
+  ].filter((s) => s.count > 0);
+
+  const donutPaths = donutSegments.map((s) => {
+    const deg = (s.count / totalPoints) * 360;
+    const path = { ...s, start: angleStart, end: angleStart + deg };
+    angleStart += deg;
+    return path;
+  });
+
+  const occupationPct =
+    totalPoints > 0
+      ? Math.round(
+          ((pointsPleins.length + pointsMoyens.length) / totalPoints) * 100,
+        )
+      : 0;
+
+  const occupationLabel =
+    occupationPct >= 60 ? "critique" : occupationPct >= 30 ? "moyen" : "bon";
+
+  const dateLabel = new Date().toLocaleDateString("fr-FR", {
+    weekday: "short",
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -89,121 +128,151 @@ function Dashboard() {
       <div className={styles.page}>
         {/* HEADER */}
         <div className={styles.header}>
-          <div className={styles.headerLeft}>
-            <h1>Tableau de bord</h1>
-            <p>Quartier Madina · Plateforme de gestion Weu</p>
+          <div className={styles.headerLogo}>
+            <div className={styles.headerLogoIcon}>W</div>
+            <div>
+              <div className={styles.headerLogoName}>Weu</div>
+              <div className={styles.headerLogoSub}>
+                Administration · Madina
+              </div>
+            </div>
           </div>
           <div className={styles.headerRight}>
-            <span className={styles.headerDateIcon}>
-              <ion-icon name="calendar-number"></ion-icon>
-            </span>
-            <div>
-              <div className={styles.headerDateLabel}>Aujourd'hui</div>
-              <div className={styles.headerDateVal}>{dateAujourdhui}</div>
+            <div className={styles.headerDate}>
+              <ion-icon
+                name="calendar-outline"
+                style={{ color: "#8A90A0", fontSize: 14 }}
+              ></ion-icon>
+              {dateLabel}
             </div>
+            <div className={styles.headerAvatar}>MA</div>
           </div>
         </div>
 
-        {/* KPIs */}
-        <div className={styles.kpiRow}>
-          <div className={styles.kpiCard}>
-            <div
-              className={styles.kpiIconWrap}
-              style={{ background: "#e8f8f0" }}
-            >
-              <ion-icon name="home"></ion-icon>
+        {/* MAIN */}
+        <div className={styles.main}>
+          {/* TITRE */}
+          <div className={styles.pageTitle}>
+            <div className={styles.pageTitleLeft}>
+              <h1>Tableau de bord</h1>
+              <p>Quartier Madina · Plateforme de gestion Weu</p>
             </div>
-            <div className={styles.kpiInfo}>
-              <div className={styles.kpiLabel}>Ménages actifs</div>
-              <div className={styles.kpiVal} style={{ color: "#0d6349" }}>
-                {totalMenages}
+            <button
+              className={styles.btnPlanifier}
+              onClick={() => navigate("/tournees")}
+            >
+              <ion-icon name="add"></ion-icon>
+              Planifier une tournée
+            </button>
+          </div>
+
+          {/* KPIs */}
+          <div className={styles.kpiGrid}>
+            <div className={styles.kpiCard}>
+              <div className={styles.kpiHeader}>
+                <div className={styles.kpiLabel}>Ménages actifs</div>
+                <div
+                  className={styles.kpiIconWrap}
+                  style={{ background: "rgba(251,191,36,0.14)" }}
+                >
+                  <ion-icon
+                    name="home-outline"
+                    style={{ color: "#FBBF24", fontSize: 18 }}
+                  ></ion-icon>
+                </div>
               </div>
-              <div className={styles.kpiSub}>familles inscrites</div>
+              <div>
+                <div className={styles.kpiVal}>{totalMenages}</div>
+                <div className={styles.kpiSub}>familles inscrites</div>
+              </div>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <div className={styles.kpiHeader}>
+                <div className={styles.kpiLabel}>Cotisations ce mois</div>
+                <div
+                  className={styles.kpiIconWrap}
+                  style={{ background: "rgba(45,212,191,0.14)" }}
+                >
+                  <ion-icon
+                    name="card-outline"
+                    style={{ color: "#2DD4BF", fontSize: 18 }}
+                  ></ion-icon>
+                </div>
+              </div>
+              <div>
+                <div className={styles.kpiVal} style={{ color: "#2DD4BF" }}>
+                  {totalCotisations.toLocaleString("fr-FR")}
+                  <span className={styles.kpiUnit}> FC</span>
+                </div>
+                <div className={styles.kpiSub}>
+                  {cotisationsMois.length} paiements reçus
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <div className={styles.kpiHeader}>
+                <div className={styles.kpiLabel}>Points urgents</div>
+                <div
+                  className={styles.kpiIconWrap}
+                  style={{ background: "rgba(251,113,133,0.12)" }}
+                >
+                  <ion-icon
+                    name="location-outline"
+                    style={{ color: "#FB7185", fontSize: 18 }}
+                  ></ion-icon>
+                </div>
+              </div>
+              <div>
+                <div className={styles.kpiVal} style={{ color: "#FB7185" }}>
+                  {pointsPleins.length}
+                </div>
+                <div className={styles.kpiSub}>
+                  {pointsPleins.length > 0
+                    ? "collecte urgente requise"
+                    : "aucune urgence"}
+                </div>
+              </div>
+            </div>
+
+            <div className={`${styles.kpiCard} ${styles.kpiCardSolde}`}>
+              <div className={styles.kpiHeader}>
+                <div className={styles.kpiLabel}>Solde du mois</div>
+                <div
+                  className={styles.kpiIconWrap}
+                  style={{ background: "rgba(52,211,153,0.14)" }}
+                >
+                  <ion-icon
+                    name="trending-up-outline"
+                    style={{ color: "#34D399", fontSize: 18 }}
+                  ></ion-icon>
+                </div>
+              </div>
+              <div>
+                <div className={styles.kpiVal} style={{ color: "#34D399" }}>
+                  {solde >= 0 ? "+" : ""}
+                  {solde.toLocaleString("fr-FR")}
+                  <span className={styles.kpiUnit}> FC</span>
+                </div>
+                <div className={styles.kpiSub}>
+                  {solde >= 0 ? "excédent" : "déficit"}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className={styles.kpiCard}>
-            <div
-              className={styles.kpiIconWrap}
-              style={{ background: "#e8f0fd" }}
-            >
-              <ion-icon name="wallet"></ion-icon>
-            </div>
-            <div className={styles.kpiInfo}>
-              <div className={styles.kpiLabel}>Cotisations ce mois</div>
-              <div
-                className={styles.kpiVal}
-                style={{ color: "#1a5c99", fontSize: 20, marginTop: 4 }}
-              >
-                {totalCotisations.toLocaleString("fr-FR")} FC
-              </div>
-              <div className={styles.kpiSub}>
-                {cotisationsMois.length} paiements reçus
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.kpiCard}>
-            <div
-              className={styles.kpiIconWrap}
-              style={{
-                background: pointsPleins.length > 0 ? "#fef2f2" : "#e8f8f0",
-              }}
-            >
-              <ion-icon name="location"></ion-icon>
-            </div>
-            <div className={styles.kpiInfo}>
-              <div className={styles.kpiLabel}>Points urgents</div>
-              <div
-                className={styles.kpiVal}
-                style={{
-                  color: pointsPleins.length > 0 ? "#c0392b" : "#1a8f69",
-                }}
-              >
-                {pointsPleins.length}
-              </div>
-              <div className={styles.kpiSub}>
-                {pointsPleins.length > 0
-                  ? "collecte urgente requise"
-                  : "aucune urgence"}
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.kpiCard}>
-            <div
-              className={styles.kpiIconWrap}
-              style={{ background: solde >= 0 ? "#e8f8f0" : "#fef2f2" }}
-            >
-              <ion-icon name="cash"></ion-icon>
-            </div>
-            <div className={styles.kpiInfo}>
-              <div className={styles.kpiLabel}>Solde du mois</div>
-              <div
-                className={styles.kpiVal}
-                style={{
-                  color: solde >= 0 ? "#0d6349" : "#c0392b",
-                  fontSize: 20,
-                  marginTop: 4,
-                }}
-              >
-                {solde >= 0 ? "+" : ""}
-                {solde.toLocaleString("fr-FR")} FC
-              </div>
-              <div className={styles.kpiSub}>
-                {solde >= 0 ? "excédent" : "déficit"}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* BODY */}
-        <div className={styles.body}>
-          <div className={styles.gridMain}>
+          {/* BODY GRID */}
+          <div className={styles.bodyGrid}>
             {/* Points de collecte */}
             <div className={styles.card}>
               <div className={styles.cardHead}>
-                <span className={styles.cardTitle}>Points de collecte</span>
+                <div className={styles.cardTitle}>
+                  Points de collecte
+                  <span className={styles.cardBadge}>
+                    {points.length} points
+                  </span>
+                </div>
                 <button
                   className={styles.cardLink}
                   onClick={() => navigate("/points")}
@@ -214,205 +283,392 @@ function Dashboard() {
               {loading ? (
                 <div className={styles.loading}>Chargement...</div>
               ) : (
-                <table className={styles.ptTable}>
-                  <thead>
-                    <tr>
-                      <th className={styles.ptTh}>Point de collecte</th>
-                      <th className={styles.ptTh}>Ménages</th>
-                      <th className={styles.ptTh}>Remplissage</th>
-                      <th className={styles.ptTh}>Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {points.map((p) => {
-                      const pct = getPct(p.id_point);
-                      const statut = getStatut(p.id_point);
-                      const nbMenages = getNbMenages(p.id_point);
-                      return (
-                        <tr key={p.id_point}>
-                          <td className={styles.ptTd}>
-                            <div className={styles.ptNom}>{p.nom}</div>
-                            <div className={styles.ptSec}>{p.secteur?.nom}</div>
-                          </td>
-                          <td className={styles.ptTd}>
-                            <span className={styles.menageBadge}>
-                              {nbMenages}
-                            </span>
-                          </td>
-                          <td className={styles.ptTd}>
-                            <div className={styles.barWrap}>
-                              <div className={styles.barTrack}>
-                                <div
-                                  className={`${styles.barFill} ${
-                                    statut === "plein"
-                                      ? styles.fillPlein
-                                      : statut === "moyen"
-                                        ? styles.fillMoyen
-                                        : styles.fillVide
-                                  }`}
-                                  style={{ width: `${pct}%` }}
-                                />
-                              </div>
-                              <span
-                                className={styles.barPct}
-                                style={{
-                                  color:
-                                    statut === "plein"
-                                      ? "#c0392b"
-                                      : statut === "moyen"
-                                        ? "#e67e22"
-                                        : "#1a8f69",
-                                }}
-                              >
-                                {pct}%
-                              </span>
-                            </div>
-                          </td>
-                          <td className={styles.ptTd}>
+                <>
+                  <div className={styles.ptHeader}>
+                    <div className={styles.ptHeaderCell}>Point de collecte</div>
+                    <div className={styles.ptHeaderCell}>Ménages</div>
+                    <div className={styles.ptHeaderCell}>Remplissage</div>
+                    <div className={styles.ptHeaderCell}>Statut</div>
+                  </div>
+                  {points.map((p) => {
+                    const pct = getPct(p.id_point);
+                    const statut = getStatut(p.id_point);
+                    const nbMenages = getNbMenages(p.id_point);
+                    const barColor =
+                      statut === "plein"
+                        ? "#FB7185"
+                        : statut === "moyen"
+                          ? "#FBBF24"
+                          : "#34D399";
+                    const pctColor =
+                      statut === "plein"
+                        ? "#FB7185"
+                        : statut === "moyen"
+                          ? "#FBBF24"
+                          : "#6B7185";
+                    const chipStyle =
+                      statut === "plein"
+                        ? {
+                            background: "rgba(251,113,133,0.14)",
+                            color: "#FB7185",
+                          }
+                        : statut === "moyen"
+                          ? {
+                              background: "rgba(251,191,36,0.14)",
+                              color: "#FBBF24",
+                            }
+                          : {
+                              background: "rgba(52,211,153,0.12)",
+                              color: "#34D399",
+                            };
+                    const chipLabel =
+                      statut === "plein"
+                        ? "Plein"
+                        : statut === "moyen"
+                          ? "Bientôt plein"
+                          : "OK";
+                    return (
+                      <div
+                        key={p.id_point}
+                        className={`${styles.ptRow} ${statut === "plein" ? styles.ptRowPlein : statut === "moyen" ? styles.ptRowMoyen : ""}`}
+                      >
+                        <div>
+                          <div className={styles.ptNom}>{p.nom}</div>
+                          <div className={styles.ptZone}>{p.secteur?.nom}</div>
+                        </div>
+                        <div className={styles.ptMenages}>
+                          <span className={styles.ptMenagesBadge}>
+                            {nbMenages}
+                          </span>
+                        </div>
+                        <div className={styles.ptBarWrap}>
+                          <div className={styles.ptBarTrack}>
+                            <div
+                              className={styles.ptBarFill}
+                              style={{ width: `${pct}%`, background: barColor }}
+                            />
+                          </div>
+                          <span
+                            className={styles.ptBarPct}
+                            style={{ color: pctColor }}
+                          >
+                            {pct}%
+                          </span>
+                        </div>
+                        <div className={styles.ptStatut}>
+                          <span className={styles.ptChip} style={chipStyle}>
                             <span
-                              className={`${styles.chip} ${
-                                statut === "plein"
-                                  ? styles.chipPlein
-                                  : statut === "moyen"
-                                    ? styles.chipMoyen
-                                    : styles.chipVide
-                              }`}
-                            >
-                              {statut === "plein"
-                                ? "● Plein"
-                                : statut === "moyen"
-                                  ? "● Bientôt plein"
-                                  : "● OK"}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                              className={styles.ptChipDot}
+                              style={{ background: chipStyle.color }}
+                            />
+                            {chipLabel}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
               )}
             </div>
 
-            {/* Alertes */}
-            <div className={styles.card}>
-              <div className={styles.cardHead}>
-                <span className={styles.cardTitle}>Alertes</span>
-                <span style={{ fontSize: 11, color: "#7a9c8a" }}>
-                  {pointsPleins.length + pointsMoyens.length} point(s) à
-                  surveiller
-                </span>
+            {/* Colonne droite */}
+            <div className={styles.rightCol}>
+              {/* Donut */}
+              <div className={styles.donutCard}>
+                <div className={styles.donutCardTitle}>
+                  Occupation du réseau
+                </div>
+                <div className={styles.donutRow}>
+                  <div className={styles.donutWrap}>
+                    <svg className={styles.donutSvg} viewBox="0 0 124 124">
+                      <circle
+                        cx="62"
+                        cy="62"
+                        r="54"
+                        fill="none"
+                        stroke="rgba(15,23,42,0.08)"
+                        strokeWidth="16"
+                      />
+                      {donutPaths.map((seg, i) => (
+                        <circle
+                          key={i}
+                          cx="62"
+                          cy="62"
+                          r="54"
+                          fill="none"
+                          stroke={seg.color}
+                          strokeWidth="16"
+                          strokeDasharray={`${(seg.count / totalPoints) * 339.3} 339.3`}
+                          strokeDashoffset={-((seg.start / 360) * 339.3)}
+                          strokeLinecap="round"
+                        />
+                      ))}
+                    </svg>
+                    <div className={styles.donutCenter}>
+                      <div className={styles.donutPct}>{occupationPct}%</div>
+                      <div className={styles.donutLabel}>{occupationLabel}</div>
+                    </div>
+                  </div>
+                  <div className={styles.donutLegend}>
+                    <div className={styles.donutLegendItem}>
+                      <div className={styles.donutLegendLeft}>
+                        <div
+                          className={styles.donutDot}
+                          style={{ background: "#FB7185" }}
+                        />
+                        <span className={styles.donutLegendLabel}>Pleins</span>
+                      </div>
+                      <span className={styles.donutLegendVal}>
+                        {pointsPleins.length}
+                      </span>
+                    </div>
+                    <div className={styles.donutLegendItem}>
+                      <div className={styles.donutLegendLeft}>
+                        <div
+                          className={styles.donutDot}
+                          style={{ background: "#FBBF24" }}
+                        />
+                        <span className={styles.donutLegendLabel}>
+                          Bientôt pleins
+                        </span>
+                      </div>
+                      <span className={styles.donutLegendVal}>
+                        {pointsMoyens.length}
+                      </span>
+                    </div>
+                    <div className={styles.donutLegendItem}>
+                      <div className={styles.donutLegendLeft}>
+                        <div
+                          className={styles.donutDot}
+                          style={{ background: "#34D399" }}
+                        />
+                        <span className={styles.donutLegendLabel}>OK</span>
+                      </div>
+                      <span className={styles.donutLegendVal}>
+                        {pointsOK.length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className={styles.alertesList}>
-                {pointsPleins.length === 0 &&
-                  pointsMoyens.length === 0 &&
-                  solde >= 0 && (
-                    <div className={styles.alerteEmpty}>
-                      <ion-icon name="checkmark-circle"></ion-icon> Tout est
-                      sous contrôle
-                    </div>
-                  )}
-                {pointsPleins.length > 0 && (
-                  <div
-                    className={`${styles.alerte} ${styles.alerteRed}`}
-                    onClick={() => navigate("/points")}
-                  >
-                    <div
-                      className={styles.alerteIconWrap}
-                      style={{ background: "#fdecea" }}
-                    >
-                      <ion-icon name="notifications"></ion-icon>
-                    </div>
-                    <div className={styles.alerteContent}>
-                      <div className={styles.alerteT}>
-                        {pointsPleins.length} point(s) plein(s)
-                      </div>
-                      <div className={styles.alerteB}>
-                        Collecte urgente requise
-                      </div>
-                    </div>
-                    <span className={styles.alerteArrow}>›</span>
+
+              {/* Alertes */}
+              <div className={styles.alertesCard}>
+                <div className={styles.alertesHeader}>
+                  <div className={styles.alertesTitle}>Alertes</div>
+                  <div className={styles.alertesSub}>
+                    {pointsPleins.length +
+                      pointsMoyens.length +
+                      tourneesUrgentes.length}{" "}
+                    à surveiller
                   </div>
-                )}
-                {pointsMoyens.length > 0 && (
-                  <div
-                    className={`${styles.alerte} ${styles.alerteOrange}`}
-                    onClick={() => navigate("/points")}
-                  >
+                </div>
+                <div className={styles.alertesList}>
+                  {/* Tournées urgentes */}
+                  {tourneesUrgentes.length > 0 && (
                     <div
-                      className={styles.alerteIconWrap}
-                      style={{ background: "#fef5e7" }}
-                    >
-                      <ion-icon name="warning"></ion-icon>
-                    </div>
-                    <div className={styles.alerteContent}>
-                      <div className={styles.alerteT}>
-                        {pointsMoyens.length} point(s) bientôt pleins
-                      </div>
-                      <div className={styles.alerteB}>À surveiller de près</div>
-                    </div>
-                    <span className={styles.alerteArrow}>›</span>
-                  </div>
-                )}
-                {cotisationsMois.length < totalMenages * 0.5 &&
-                  totalMenages > 0 && (
-                    <div
-                      className={`${styles.alerte} ${styles.alerteOrange}`}
-                      onClick={() => navigate("/cotisations")}
+                      className={styles.alerte}
+                      style={{
+                        background: "rgba(147,51,234,0.10)",
+                        border: "1px solid rgba(147,51,234,0.18)",
+                      }}
+                      onClick={() => navigate("/tournees")}
                     >
                       <div
-                        className={styles.alerteIconWrap}
-                        style={{ background: "#fef5e7" }}
+                        className={styles.alerteIcon}
+                        style={{ background: "rgba(147,51,234,0.14)" }}
                       >
-                        <ion-icon name="stats-chart"></ion-icon>
+                        <ion-icon
+                          name="flash-outline"
+                          style={{ color: "#9333ea" }}
+                        ></ion-icon>
                       </div>
                       <div className={styles.alerteContent}>
                         <div className={styles.alerteT}>
-                          Faible recouvrement
+                          {tourneesUrgentes.length} tournée(s) urgente(s)
                         </div>
-                        <div className={styles.alerteB}>
-                          {cotisationsMois.length} / {totalMenages} ménages ont
-                          payé ce mois
+                        <div
+                          className={styles.alerteB}
+                          style={{ color: "#7e22ce" }}
+                        >
+                          En attente d'acceptation par l'agent
                         </div>
                       </div>
                       <span className={styles.alerteArrow}>›</span>
                     </div>
                   )}
-                {solde >= 0 && (
-                  <div className={`${styles.alerte} ${styles.alerteGreen}`}>
-                    <div
-                      className={styles.alerteIconWrap}
-                      style={{ background: "#e8f8f0" }}
-                    >
-                      <ion-icon name="checkmark"></ion-icon>
-                    </div>
-                    <div className={styles.alerteContent}>
-                      <div className={styles.alerteT}>Solde positif</div>
-                      <div className={styles.alerteB}>
-                        Votre solde du mois est excédentaire
+
+                  {/* Tout sous contrôle */}
+                  {pointsPleins.length === 0 &&
+                    pointsMoyens.length === 0 &&
+                    tourneesUrgentes.length === 0 &&
+                    solde >= 0 && (
+                      <div
+                        className={styles.alerte}
+                        style={{
+                          background: "rgba(52,211,153,0.10)",
+                          border: "1px solid rgba(52,211,153,0.18)",
+                        }}
+                      >
+                        <div
+                          className={styles.alerteIcon}
+                          style={{ background: "rgba(52,211,153,0.14)" }}
+                        >
+                          <ion-icon
+                            name="checkmark-outline"
+                            style={{ color: "#34D399" }}
+                          ></ion-icon>
+                        </div>
+                        <div className={styles.alerteContent}>
+                          <div className={styles.alerteT}>
+                            Tout est sous contrôle
+                          </div>
+                          <div
+                            className={styles.alerteB}
+                            style={{ color: "#3F9E76" }}
+                          >
+                            Aucune action requise
+                          </div>
+                        </div>
                       </div>
+                    )}
+
+                  {/* Points pleins */}
+                  {pointsPleins.length > 0 && (
+                    <div
+                      className={styles.alerte}
+                      style={{
+                        background: "rgba(251,113,133,0.10)",
+                        border: "1px solid rgba(251,113,133,0.18)",
+                      }}
+                      onClick={() => navigate("/points")}
+                    >
+                      <div
+                        className={styles.alerteIcon}
+                        style={{ background: "rgba(251,113,133,0.14)" }}
+                      >
+                        <ion-icon
+                          name="notifications-outline"
+                          style={{ color: "#FB7185" }}
+                        ></ion-icon>
+                      </div>
+                      <div className={styles.alerteContent}>
+                        <div className={styles.alerteT}>
+                          {pointsPleins.length} point(s) plein(s)
+                        </div>
+                        <div
+                          className={styles.alerteB}
+                          style={{ color: "#B06576" }}
+                        >
+                          Collecte urgente requise
+                        </div>
+                      </div>
+                      <span className={styles.alerteArrow}>›</span>
                     </div>
-                  </div>
-                )}
-                {solde < 0 && (
+                  )}
+
+                  {/* Points bientôt pleins */}
+                  {pointsMoyens.length > 0 && (
+                    <div
+                      className={styles.alerte}
+                      style={{
+                        background: "rgba(251,191,36,0.10)",
+                        border: "1px solid rgba(251,191,36,0.18)",
+                      }}
+                      onClick={() => navigate("/points")}
+                    >
+                      <div
+                        className={styles.alerteIcon}
+                        style={{ background: "rgba(251,191,36,0.14)" }}
+                      >
+                        <ion-icon
+                          name="warning-outline"
+                          style={{ color: "#FBBF24" }}
+                        ></ion-icon>
+                      </div>
+                      <div className={styles.alerteContent}>
+                        <div className={styles.alerteT}>
+                          {pointsMoyens.length} point(s) bientôt pleins
+                        </div>
+                        <div
+                          className={styles.alerteB}
+                          style={{ color: "#A07A1E" }}
+                        >
+                          À surveiller de près
+                        </div>
+                      </div>
+                      <span className={styles.alerteArrow}>›</span>
+                    </div>
+                  )}
+
+                  {/* Faible recouvrement */}
+                  {cotisationsMois.length < totalMenages * 0.5 &&
+                    totalMenages > 0 && (
+                      <div
+                        className={styles.alerte}
+                        style={{
+                          background: "rgba(251,191,36,0.10)",
+                          border: "1px solid rgba(251,191,36,0.18)",
+                        }}
+                        onClick={() => navigate("/cotisations")}
+                      >
+                        <div
+                          className={styles.alerteIcon}
+                          style={{ background: "rgba(251,191,36,0.14)" }}
+                        >
+                          <ion-icon
+                            name="stats-chart-outline"
+                            style={{ color: "#FBBF24" }}
+                          ></ion-icon>
+                        </div>
+                        <div className={styles.alerteContent}>
+                          <div className={styles.alerteT}>
+                            Faible recouvrement
+                          </div>
+                          <div
+                            className={styles.alerteB}
+                            style={{ color: "#A07A1E" }}
+                          >
+                            {cotisationsMois.length}/{totalMenages} ménages ont
+                            payé
+                          </div>
+                        </div>
+                        <span className={styles.alerteArrow}>›</span>
+                      </div>
+                    )}
+
+                  {/* Solde */}
                   <div
-                    className={`${styles.alerte} ${styles.alerteRed}`}
-                    onClick={() => navigate("/finances")}
+                    className={styles.alerte}
+                    style={{
+                      background: "rgba(52,211,153,0.10)",
+                      border: "1px solid rgba(52,211,153,0.18)",
+                    }}
                   >
                     <div
-                      className={styles.alerteIconWrap}
-                      style={{ background: "#fdecea" }}
+                      className={styles.alerteIcon}
+                      style={{ background: "rgba(52,211,153,0.14)" }}
                     >
-                      <ion-icon name="trending-down"></ion-icon>
+                      <ion-icon
+                        name="trending-up-outline"
+                        style={{ color: "#34D399" }}
+                      ></ion-icon>
                     </div>
                     <div className={styles.alerteContent}>
-                      <div className={styles.alerteT}>Solde négatif</div>
-                      <div className={styles.alerteB}>
-                        Dépenses supérieures aux cotisations
+                      <div className={styles.alerteT}>
+                        Solde {solde >= 0 ? "positif" : "négatif"}
+                      </div>
+                      <div
+                        className={styles.alerteB}
+                        style={{ color: "#3F9E76" }}
+                      >
+                        {solde >= 0
+                          ? "Votre solde du mois est excédentaire"
+                          : "Dépenses supérieures aux cotisations"}
                       </div>
                     </div>
-                    <span className={styles.alerteArrow}>›</span>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>
