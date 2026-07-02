@@ -23,6 +23,16 @@ function Menages() {
   const [filtreSecteur, setFiltreSecteur] = useState("tous");
   const [recherche, setRecherche] = useState("");
 
+  const [menageSelectionne, setMenageSelectionne] = useState(null);
+  const [showModalPoint, setShowModalPoint] = useState(false);
+  const [nouveauSecteurId, setNouveauSecteurId] = useState("");
+  const [nouveauPointId, setNouveauPointId] = useState("");
+  const [pointsModalFiltres, setPointsModalFiltres] = useState([]);
+  const [savingPoint, setSavingPoint] = useState(false);
+
+  const [showModalArchive, setShowModalArchive] = useState(false);
+  const [menageAArchiver, setMenageAArchiver] = useState(null);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -37,6 +47,17 @@ function Menages() {
       setPointsFiltres([]);
     }
   }, [secteurId, points]);
+
+  useEffect(() => {
+    if (nouveauSecteurId) {
+      setPointsModalFiltres(
+        points.filter((p) => p.id_secteur === parseInt(nouveauSecteurId)),
+      );
+      setNouveauPointId("");
+    } else {
+      setPointsModalFiltres([]);
+    }
+  }, [nouveauSecteurId, points]);
 
   async function fetchData() {
     setLoading(true);
@@ -64,20 +85,17 @@ function Menages() {
       return;
     }
 
-    // Validation format email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("L'adresse email n'est pas valide");
       return;
     }
 
-    // Vérification email déjà utilisé
     const { data: emailExistant } = await supabase
       .from("utilisateur")
       .select("id_utilisateur")
       .eq("email", email)
       .single();
-
     if (emailExistant) {
       setError("Cet email est déjà utilisé par un autre ménage");
       return;
@@ -99,7 +117,7 @@ function Menages() {
         const msgAnglais = errBody?.error || "";
         let msgFrancais = "Erreur lors de la création";
         if (msgAnglais.includes("already been registered"))
-          msgFrancais = "Cet email est déjà utilisé par un autre ménage";
+          msgFrancais = "Cet email est déjà utilisé";
         else if (msgAnglais.includes("invalid email"))
           msgFrancais = "Adresse email invalide";
         setError(msgFrancais);
@@ -123,13 +141,86 @@ function Menages() {
     fetchData();
   }
 
-  async function toggleStatut(menage) {
-    const nouveauStatut = menage.statut === "actif" ? "inactif" : "actif";
+  async function changerStatut(menage, nouveauStatut) {
+    if (nouveauStatut === "archive") {
+      setMenageAArchiver(menage);
+      setShowModalArchive(true);
+      return;
+    }
     const { error } = await supabase
       .from("menage")
       .update({ statut: nouveauStatut })
       .eq("id_menage", menage.id_menage);
     if (!error) fetchData();
+  }
+
+  async function confirmerArchivage() {
+    const { error } = await supabase
+      .from("menage")
+      .update({ statut: "archive" })
+      .eq("id_menage", menageAArchiver.id_menage);
+    if (!error) {
+      setShowModalArchive(false);
+      setMenageAArchiver(null);
+      fetchData();
+    }
+  }
+
+  async function handleChangerPoint() {
+    if (!nouveauPointId) return;
+    setSavingPoint(true);
+
+    const { error } = await supabase
+      .from("menage")
+      .update({
+        id_point: parseInt(nouveauPointId),
+        id_secteur: parseInt(nouveauSecteurId),
+      })
+      .eq("id_menage", menageSelectionne.id_menage);
+
+    if (!error) {
+      setShowModalPoint(false);
+      setMenageSelectionne(null);
+      setNouveauSecteurId("");
+      setNouveauPointId("");
+      fetchData();
+    }
+    setSavingPoint(false);
+  }
+
+  function ouvrirModalPoint(menage) {
+    setMenageSelectionne(menage);
+    setNouveauSecteurId(String(menage.id_secteur));
+    setNouveauPointId(String(menage.id_point));
+    setShowModalPoint(true);
+  }
+
+  function getBadgeClass(statut) {
+    switch (statut) {
+      case "actif":
+        return styles.badgeActif;
+      case "suspendu":
+        return styles.badgeSuspendu;
+      case "archive":
+        return styles.badgeArchive;
+      default:
+        return styles.badgeAttente;
+    }
+  }
+
+  function getStatutLabel(statut) {
+    switch (statut) {
+      case "actif":
+        return "Actif";
+      case "suspendu":
+        return "Suspendu";
+      case "archive":
+        return "Archivé";
+      case "en_attente":
+        return "En attente";
+      default:
+        return statut;
+    }
   }
 
   const menagesFiltres = menages.filter((m) => {
@@ -144,7 +235,8 @@ function Menages() {
 
   const total = menages.length;
   const actifs = menages.filter((m) => m.statut === "actif").length;
-  const inactifs = menages.filter((m) => m.statut === "inactif").length;
+  const suspendus = menages.filter((m) => m.statut === "suspendu").length;
+  const archives = menages.filter((m) => m.statut === "archive").length;
 
   return (
     <Layout>
@@ -269,20 +361,20 @@ function Menages() {
               </div>
               <div className={styles.statItem}>
                 <div>
-                  <div className={styles.statLabel}>Inactifs</div>
-                  <div className={styles.statSub}>désactivés</div>
+                  <div className={styles.statLabel}>Suspendus</div>
+                  <div className={styles.statSub}>temporairement</div>
                 </div>
-                <div className={styles.statVal} style={{ color: "#FB7185" }}>
-                  {inactifs}
+                <div className={styles.statVal} style={{ color: "#FBBF24" }}>
+                  {suspendus}
                 </div>
               </div>
               <div className={styles.statItem}>
                 <div>
-                  <div className={styles.statLabel}>Secteurs</div>
-                  <div className={styles.statSub}>zones couvertes</div>
+                  <div className={styles.statLabel}>Archivés</div>
+                  <div className={styles.statSub}>départs définitifs</div>
                 </div>
-                <div className={styles.statVal} style={{ color: "#FBBF24" }}>
-                  {secteurs.length}
+                <div className={styles.statVal} style={{ color: "#FB7185" }}>
+                  {archives}
                 </div>
               </div>
             </div>
@@ -321,7 +413,9 @@ function Menages() {
               options={[
                 { value: "tous", label: "Tous les statuts" },
                 { value: "actif", label: "Actifs" },
-                { value: "inactif", label: "Inactifs" },
+                { value: "en_attente", label: "En attente" },
+                { value: "suspendu", label: "Suspendus" },
+                { value: "archive", label: "Archivés" },
               ]}
             />
           </div>
@@ -337,7 +431,7 @@ function Menages() {
                   <th className={styles.th}>Téléphone</th>
                   <th className={styles.th}>Inscription</th>
                   <th className={styles.th}>Statut</th>
-                  <th className={styles.th}>Action</th>
+                  <th className={styles.th}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -362,27 +456,58 @@ function Menages() {
                         )}
                       </td>
                       <td className={styles.td}>
-                        <span
-                          className={
-                            m.statut === "actif"
-                              ? styles.badgeActif
-                              : styles.badgeInactif
-                          }
-                        >
-                          {m.statut}
+                        <span className={getBadgeClass(m.statut)}>
+                          {getStatutLabel(m.statut)}
                         </span>
                       </td>
                       <td className={styles.td}>
-                        <button
-                          onClick={() => toggleStatut(m)}
-                          className={
-                            m.statut === "actif"
-                              ? styles.btnSmallRed
-                              : styles.btnSmallGreen
-                          }
-                        >
-                          {m.statut === "actif" ? "Désactiver" : "Activer"}
-                        </button>
+                        <div className={styles.actionsWrap}>
+                          {m.statut !== "archive" && (
+                            <button
+                              className={styles.btnSmallBlue}
+                              onClick={() => ouvrirModalPoint(m)}
+                            >
+                              Changer point
+                            </button>
+                          )}
+                          {m.statut === "actif" && (
+                            <button
+                              className={styles.btnSmallOrange}
+                              onClick={() => changerStatut(m, "suspendu")}
+                            >
+                              Suspendre
+                            </button>
+                          )}
+                          {m.statut === "suspendu" && (
+                            <>
+                              <button
+                                className={styles.btnSmallGreen}
+                                onClick={() => changerStatut(m, "actif")}
+                              >
+                                Réactiver
+                              </button>
+                              <button
+                                className={styles.btnSmallRed}
+                                onClick={() => changerStatut(m, "archive")}
+                              >
+                                Archiver
+                              </button>
+                            </>
+                          )}
+                          {m.statut === "en_attente" && (
+                            <button
+                              className={styles.btnSmallRed}
+                              onClick={() => changerStatut(m, "archive")}
+                            >
+                              Archiver
+                            </button>
+                          )}
+                          {m.statut === "archive" && (
+                            <span className={styles.badgeArchiveLabel}>
+                              Archivé définitivement
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -392,6 +517,141 @@ function Menages() {
           )}
         </div>
       </div>
+
+      {/* MODAL CHANGEMENT DE POINT */}
+      {showModalPoint && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setShowModalPoint(false)}
+        >
+          <div
+            className={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <span className={styles.modalTitle}>
+                Changer le point de collecte
+              </span>
+              <button
+                className={styles.modalClose}
+                onClick={() => setShowModalPoint(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <p className={styles.modalSub}>
+                Ménage : <strong>{menageSelectionne?.nom}</strong>
+                <br />
+                Point actuel :{" "}
+                <strong>{menageSelectionne?.point_collecte?.nom}</strong>
+              </p>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Nouveau secteur</label>
+                <Select
+                  value={nouveauSecteurId}
+                  onChange={(e) => setNouveauSecteurId(e.target.value)}
+                  placeholder="Sélectionner un secteur..."
+                  options={secteurs.map((s) => ({
+                    value: String(s.id_secteur),
+                    label: s.nom,
+                  }))}
+                />
+              </div>
+              <div className={styles.formGroup} style={{ marginTop: 14 }}>
+                <label className={styles.label}>
+                  Nouveau point de collecte
+                </label>
+                <Select
+                  value={nouveauPointId}
+                  onChange={(e) => setNouveauPointId(e.target.value)}
+                  placeholder="Sélectionner un point..."
+                  disabled={!nouveauSecteurId}
+                  options={pointsModalFiltres.map((p) => ({
+                    value: String(p.id_point),
+                    label: p.nom,
+                  }))}
+                />
+              </div>
+            </div>
+            <div className={styles.modalFooter}>
+              <button
+                className={styles.btnOutline}
+                onClick={() => setShowModalPoint(false)}
+              >
+                Annuler
+              </button>
+              <button
+                className={styles.btnGreen}
+                onClick={handleChangerPoint}
+                disabled={!nouveauPointId || savingPoint}
+              >
+                {savingPoint ? "Enregistrement..." : "Confirmer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ARCHIVAGE */}
+      {showModalArchive && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setShowModalArchive(false)}
+        >
+          <div
+            className={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <span className={styles.modalTitle}>Archiver le ménage</span>
+              <button
+                className={styles.modalClose}
+                onClick={() => setShowModalArchive(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className={styles.modalBody}>
+              <p className={styles.modalSub}>
+                Vous êtes sur le point d'archiver le ménage{" "}
+                <strong>{menageAArchiver?.nom}</strong>.
+              </p>
+              <div
+                style={{
+                  background: "rgba(251,113,133,0.08)",
+                  border: "1px solid rgba(251,113,133,0.2)",
+                  borderRadius: 12,
+                  padding: "14px 16px",
+                }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    color: "#fb7185",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Attention — une fois archivé, ce ménage ne pourra plus être
+                  réactivé.
+                </p>
+              </div>
+            </div>
+            <div className={styles.modalFooter}>
+              <button
+                className={styles.btnOutline}
+                onClick={() => setShowModalArchive(false)}
+              >
+                Annuler
+              </button>
+              <button className={styles.btnRed} onClick={confirmerArchivage}>
+                Confirmer l'archivage
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
