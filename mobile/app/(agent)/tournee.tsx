@@ -9,8 +9,10 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../supabase";
 import { styles } from "./tournee.styles";
+import { colors } from "../theme";
 
 export default function Tournee() {
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,6 @@ export default function Tournee() {
 
   async function fetchData() {
     setLoading(true);
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -43,7 +44,6 @@ export default function Tournee() {
       .select("*")
       .eq("auth_id", user.id)
       .single();
-
     setUtilisateur(utilisateurData);
 
     const { data: tourneeActiveData } = await supabase
@@ -57,7 +57,6 @@ export default function Tournee() {
 
     setTournee(tourneeActiveData || null);
     setPointsTournee(tourneeActiveData?.tournee_point || []);
-
     setLoading(false);
   }
 
@@ -69,7 +68,6 @@ export default function Tournee() {
       .select("id_pointage")
       .eq("id_point", idPoint)
       .eq("statut_sync", "synchronisé");
-
     const nbPointages = pointagesData?.length || 0;
 
     await supabase
@@ -93,7 +91,6 @@ export default function Tournee() {
       .eq("id_tournee", tournee.id_tournee);
 
     const tousVides = pointsRestants?.every((p) => p.heure_vidage !== null);
-
     if (tousVides) {
       await supabase
         .from("tournee")
@@ -108,7 +105,7 @@ export default function Tournee() {
   async function retirerPoint(idPoint: number, nomPoint: string) {
     Alert.alert(
       "Retirer ce point",
-      `Voulez-vous retirer "${nomPoint}" de cette tournée ? Il sera réintégré dans les prochaines propositions.`,
+      `Voulez-vous retirer "${nomPoint}" de cette tournée ?`,
       [
         { text: "Annuler", style: "cancel" },
         {
@@ -129,14 +126,12 @@ export default function Tournee() {
             const aucunPointNonVide = !pointsRestants?.some(
               (p) => p.heure_vidage === null,
             );
-
             if (aucunPointNonVide) {
               await supabase
                 .from("tournee")
                 .update({ statut: "terminée" })
                 .eq("id_tournee", tournee.id_tournee);
             }
-
             fetchData();
           },
         },
@@ -163,180 +158,191 @@ export default function Tournee() {
   if (loading) {
     return (
       <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color="#1a5c99" />
+        <ActivityIndicator size="large" color={colors.teal} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Ma tournée</Text>
-          <Text style={styles.headerSub}>
-            {tournee ? getDateLabel(tournee.date) : "Aucune tournée en cours"}
-          </Text>
-        </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 110 }}
+      >
+        <View style={{ overflow: "hidden" }}>
+          {/* HERO */}
+          <LinearGradient
+            colors={["#2DD4BF", "#20B8C4", "#3B82F6", "#3B82F6", "#F4F5F8"]}
+            locations={[0, 0.25, 0.55, 0.72, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={{ paddingTop: 56, paddingHorizontal: 24, paddingBottom: 80 }}
+          >
+            <Text style={styles.headerTitle}>Ma tournée</Text>
+            <Text style={styles.headerSub}>
+              {tournee ? getDateLabel(tournee.date) : "Aucune tournée en cours"}
+            </Text>
+          </LinearGradient>
 
-        <View style={styles.body}>
-          {!tournee ? (
-            <View style={styles.emptyCard}>
-              <Ionicons
-                name="car-outline"
-                size={40}
-                color="#7a9c8a"
-                style={{ marginBottom: 12 }}
-              />
-              <Text style={styles.emptyTitle}>Aucune tournée en cours</Text>
-              <Text style={styles.emptyText}>
-                Rendez-vous sur l'accueil pour accepter une proposition de
-                tournée.
-              </Text>
-            </View>
-          ) : (
-            <>
-              <View style={styles.card}>
-                <View style={styles.tourneeHeader}>
-                  <Text style={styles.tourneeDate}>
-                    {getDateLabel(tournee.date)}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: "700",
-                      color: "#1a5c99",
-                    }}
-                  >
-                    {pointsValides.length}/{pointsTournee.length} validés
-                  </Text>
-                </View>
-                {tournee.notes && (
-                  <Text style={styles.tourneeNotes}>{tournee.notes}</Text>
-                )}
+          <View style={styles.body}>
+            {!tournee ? (
+              <View style={styles.emptyCard}>
+                <Ionicons
+                  name="car-outline"
+                  size={40}
+                  color={colors.textLabel}
+                />
+                <Text style={styles.emptyTitle}>Aucune tournée en cours</Text>
+                <Text style={styles.emptyText}>
+                  Rendez-vous sur l&apos;accueil pour accepter une proposition
+                  de tournée.
+                </Text>
               </View>
+            ) : (
+              <>
+                {/* INFOS TOURNÉE */}
+                <View style={styles.card}>
+                  <View style={styles.tourneeHeader}>
+                    <Text style={styles.tourneeDate}>
+                      {getDateLabel(tournee.date)}
+                    </Text>
+                    <Text style={styles.tourneeProgress}>
+                      {pointsValides.length}/{pointsTournee.length} validés
+                    </Text>
+                  </View>
+                  {tournee.notes && (
+                    <Text style={styles.tourneeNotes}>{tournee.notes}</Text>
+                  )}
+                </View>
 
-              <Text style={styles.cardLabel}>Points à vider</Text>
+                <Text style={styles.cardLabel}>Points à vider</Text>
 
-              {pointsTournee.map((tp) => {
-                const estValide = tp.heure_vidage !== null;
-                return (
-                  <View
-                    key={tp.id_point}
-                    style={[
-                      styles.pointCard,
-                      estValide && styles.pointCardDone,
-                    ]}
-                  >
+                {pointsTournee.map((tp) => {
+                  const estValide = tp.heure_vidage !== null;
+                  return (
                     <View
+                      key={tp.id_point}
                       style={[
-                        styles.pointIcon,
-                        {
-                          backgroundColor: estValide ? "#e6f5ec" : "#fdecea",
-                        },
+                        styles.pointCard,
+                        estValide && styles.pointCardDone,
                       ]}
                     >
-                      <Ionicons
-                        name={estValide ? "checkmark-circle" : "trash"}
-                        size={22}
-                        color={estValide ? "#1a8f69" : "#c0392b"}
-                      />
-                    </View>
-                    <View style={styles.pointContent}>
-                      <Text style={styles.pointNom}>
-                        {tp.point_collecte?.nom}
-                      </Text>
-                      <Text style={styles.pointSecteur}>
-                        {tp.point_collecte?.secteur?.nom}
-                      </Text>
-                      <Text
+                      <View
                         style={[
-                          styles.pointStatus,
+                          styles.pointIcon,
                           {
-                            color: estValide ? "#1a8f69" : "#c0392b",
+                            backgroundColor: estValide
+                              ? colors.greenBg
+                              : colors.redBg,
                           },
                         ]}
                       >
-                        {estValide ? "Vidé" : "À vider"}
-                      </Text>
-                    </View>
-                    {estValide ? (
-                      <View style={styles.valideBadge}>
-                        <Text style={styles.valideBadgeText}>Fait</Text>
-                      </View>
-                    ) : (
-                      <View style={{ gap: 6 }}>
-                        <TouchableOpacity
-                          style={styles.validerBtn}
-                          onPress={() => validerPoint(tp.id_point)}
-                          disabled={validationLoading === tp.id_point}
-                        >
-                          <Text style={styles.validerBtnText}>
-                            {validationLoading === tp.id_point
-                              ? "..."
-                              : "Valider"}
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() =>
-                            retirerPoint(tp.id_point, tp.point_collecte?.nom)
+                        <Ionicons
+                          name={
+                            estValide ? "checkmark-circle" : "trash-outline"
                           }
-                        >
-                          <Text
-                            style={{
-                              fontSize: 11,
-                              color: "#c0392b",
-                              textAlign: "center",
-                            }}
-                          >
-                            Retirer
-                          </Text>
-                        </TouchableOpacity>
+                          size={22}
+                          color={estValide ? colors.green : colors.red}
+                        />
                       </View>
-                    )}
-                  </View>
-                );
-              })}
+                      <View style={styles.pointContent}>
+                        <Text style={styles.pointNom}>
+                          {tp.point_collecte?.nom}
+                        </Text>
+                        <Text style={styles.pointSecteur}>
+                          {tp.point_collecte?.secteur?.nom}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.pointStatus,
+                            { color: estValide ? colors.green : colors.red },
+                          ]}
+                        >
+                          {estValide ? "Vidé" : "À vider"}
+                        </Text>
+                      </View>
+                      {estValide ? (
+                        <View style={styles.valideBadge}>
+                          <Text style={styles.valideBadgeText}>Fait ✓</Text>
+                        </View>
+                      ) : (
+                        <View style={{ gap: 6, alignItems: "center" }}>
+                          <TouchableOpacity
+                            onPress={() => validerPoint(tp.id_point)}
+                            disabled={validationLoading === tp.id_point}
+                            activeOpacity={0.88}
+                          >
+                            <LinearGradient
+                              colors={["#2DD4BF", "#3B82F6"]}
+                              start={{ x: 0, y: 0 }}
+                              end={{ x: 1, y: 0 }}
+                              style={[
+                                styles.validerBtn,
+                                {
+                                  opacity:
+                                    validationLoading === tp.id_point ? 0.6 : 1,
+                                },
+                              ]}
+                            >
+                              <Text style={styles.validerBtnText}>
+                                {validationLoading === tp.id_point
+                                  ? "..."
+                                  : "Valider"}
+                              </Text>
+                            </LinearGradient>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() =>
+                              retirerPoint(tp.id_point, tp.point_collecte?.nom)
+                            }
+                            style={styles.retirerBtn}
+                          >
+                            <Text style={styles.retirerBtnText}>Retirer</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
 
-              {pointsRestants.length === 0 && pointsTournee.length > 0 && (
-                <View
-                  style={[
-                    styles.card,
-                    {
-                      backgroundColor: "#e6f5ec",
-                      borderColor: "#b8ddc8",
-                      alignItems: "center",
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="trophy"
-                    size={32}
-                    color="#1a8f69"
-                    style={{ marginBottom: 8 }}
-                  />
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontWeight: "800",
-                      color: "#1a8f69",
-                    }}
+                {/* TOURNÉE TERMINÉE */}
+                {pointsRestants.length === 0 && pointsTournee.length > 0 && (
+                  <View
+                    style={[
+                      styles.card,
+                      {
+                        backgroundColor: colors.greenBg,
+                        borderColor: colors.green + "40",
+                        alignItems: "center",
+                        gap: 6,
+                      },
+                    ]}
                   >
-                    Tournée terminée !
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: "#4a6a58",
-                      marginTop: 4,
-                      textAlign: "center",
-                    }}
-                  >
-                    Tous les points ont été vidés avec succès.
-                  </Text>
-                </View>
-              )}
-            </>
-          )}
+                    <Ionicons name="trophy" size={32} color={colors.green} />
+                    <Text
+                      style={{
+                        fontFamily: "SpaceGrotesk_700Bold",
+                        fontSize: 15,
+                        color: colors.green,
+                      }}
+                    >
+                      Tournée terminée !
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: "InstrumentSans_400Regular",
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                        textAlign: "center",
+                      }}
+                    >
+                      Tous les points ont été vidés avec succès.
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
         </View>
       </ScrollView>
     </View>
