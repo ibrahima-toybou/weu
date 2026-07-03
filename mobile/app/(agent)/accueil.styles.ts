@@ -1,103 +1,86 @@
 import { StyleSheet } from "react-native";
+import { colors, fonts, radius, shadow } from "../theme";
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f4f8fc",
+    backgroundColor: "#F4F5F8",
   },
   loadingWrap: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f4f8fc",
+    backgroundColor: "#F4F5F8",
   },
 
-  // HEADER
-  header: {
-    backgroundColor: "#1a5c99",
-    paddingHorizontal: 24,
-    paddingTop: 56,
-    paddingBottom: 24,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
   headerGreeting: {
-    fontSize: 13,
-    color: "rgba(255,255,255,0.7)",
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.82)",
     marginBottom: 3,
   },
   headerName: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#fff",
+    fontFamily: fonts.heading,
+    fontSize: 28,
+    color: "#FFFFFF",
     letterSpacing: -0.3,
   },
   headerSub: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.6)",
-    marginTop: 3,
-  },
-  deconnexionBtn: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  deconnexionText: {
-    fontSize: 12,
-    color: "#fff",
-    fontWeight: "500",
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: "rgba(255,255,255,0.78)",
+    marginTop: 4,
   },
 
-  // BODY
   body: {
-    padding: 16,
-    gap: 12,
+    paddingHorizontal: 18,
+    marginTop: -20,
+    paddingBottom: 110,
+    gap: 14,
   },
 
-  // CARD
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 18,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.xl,
     padding: 18,
     borderWidth: 1,
-    borderColor: "#e0eaf5",
-    shadowColor: "#1a5c99",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: colors.border,
+    ...shadow.card,
   },
   cardLabel: {
+    fontFamily: fonts.body,
     fontSize: 10,
-    fontWeight: "700",
-    color: "#7a9c8a",
+    color: colors.textLabel,
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    marginBottom: 10,
+    marginBottom: 12,
+  },
+  cardLabelHero: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 11,
+    color: colors.textPrimary,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 12,
   },
 
   // PROPOSITIONS
   propositionCard: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     padding: 16,
-    marginBottom: 10,
     borderWidth: 1,
   },
   propositionUrgent: {
-    backgroundColor: "#fdecea",
-    borderColor: "#f5b3b3",
+    backgroundColor: colors.redBg,
+    borderColor: colors.red + "40",
   },
   propositionDemain: {
-    backgroundColor: "#fdf0e0",
-    borderColor: "#f5d4a0",
+    backgroundColor: colors.amberBg,
+    borderColor: colors.amber + "40",
   },
   propositionVide: {
-    backgroundColor: "#f4faf7",
-    borderColor: "#d8eee4",
+    backgroundColor: colors.bgCard,
+    borderColor: colors.border,
   },
   propositionHeader: {
     flexDirection: "row",
@@ -106,33 +89,34 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
   },
   propositionTitle: {
+    fontFamily: fonts.headingSemiBold,
     fontSize: 14,
-    fontWeight: "800",
   },
   propositionBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: radius.full,
   },
   propositionBadgeText: {
+    fontFamily: fonts.bodySemiBold,
     fontSize: 11,
-    fontWeight: "700",
   },
   propositionPoints: {
+    fontFamily: fonts.body,
     fontSize: 12,
-    color: "#4a6a58",
+    color: colors.textSecondary,
     marginBottom: 12,
     lineHeight: 18,
   },
   propositionBtn: {
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: radius.md,
+    padding: 13,
     alignItems: "center",
   },
   propositionBtnText: {
+    fontFamily: fonts.bodySemiBold,
     fontSize: 14,
-    fontWeight: "700",
-    color: "#fff",
+    color: "#FFFFFF",
   },
 
   // POINTS LIST
@@ -141,7 +125,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f4f9",
+    borderBottomColor: colors.borderLight,
     gap: 12,
   },
   pointRowLast: {
@@ -154,31 +138,40 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   pointNom: {
+    fontFamily: fonts.bodySemiBold,
     fontSize: 13,
-    fontWeight: "600",
-    color: "#0d1f16",
+    color: colors.textPrimary,
   },
   pointSecteur: {
+    fontFamily: fonts.body,
     fontSize: 11,
-    color: "#7a9c8a",
+    color: colors.textSecondary,
     marginTop: 1,
   },
   pointPct: {
+    fontFamily: fonts.headingSemiBold,
     fontSize: 13,
-    fontWeight: "700",
     width: 40,
     textAlign: "right",
   },
   statutDot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: 999,
+    flexShrink: 0,
   },
 
-  emptyState: {
-    textAlign: "center",
-    color: "#7a9c8a",
-    fontSize: 13,
-    padding: 16,
+  deconnexionBtn: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
+  deconnexionText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 12,
+    color: "#FFFFFF",
   },
 });
