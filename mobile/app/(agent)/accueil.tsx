@@ -9,8 +9,10 @@ import {
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../supabase";
 import { styles } from "./accueil.styles";
+import { colors } from "../theme";
 
 export default function AccueilAgent() {
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,6 @@ export default function AccueilAgent() {
 
   async function fetchData() {
     setLoading(true);
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -44,7 +45,6 @@ export default function AccueilAgent() {
       .select("*")
       .eq("auth_id", user.id)
       .single();
-
     setUtilisateur(utilisateurData);
 
     const [pointsRes, pointagesRes, menagesRes] = await Promise.all([
@@ -68,7 +68,6 @@ export default function AccueilAgent() {
       .eq("acceptee_par_agent", true)
       .limit(1)
       .single();
-
     setTourneeEnCours(tourneeEnCoursData || null);
 
     const { data: tourneesAdminData } = await supabase
@@ -77,7 +76,6 @@ export default function AccueilAgent() {
       .eq("statut", "en_cours")
       .eq("acceptee_par_agent", false)
       .order("date", { ascending: true });
-
     setTourneesUrgentes(tourneesAdminData || []);
 
     setLoading(false);
@@ -103,48 +101,39 @@ export default function AccueilAgent() {
   }
 
   function getCouleur(statut: string) {
-    if (statut === "plein") return "#c0392b";
-    if (statut === "moyen") return "#e8a020";
-    return "#1a8f69";
+    if (statut === "plein") return colors.red;
+    if (statut === "moyen") return colors.amber;
+    return colors.green;
   }
 
   const pointsPleins = points.filter((p) => getStatut(p.id_point) === "plein");
   const pointsMoyens = points.filter((p) => getStatut(p.id_point) === "moyen");
 
-  async function handleDeconnexion() {
-    await supabase.auth.signOut();
-    router.replace("/");
-  }
-
   async function accepterProposition(
-    typeProposition: "immediate" | "demain" | "urgence",
+    type: "immediate" | "demain" | "urgence",
     idTourneeUrgente?: number,
   ) {
     setCreationLoading(true);
 
-    if (typeProposition === "urgence" && idTourneeUrgente) {
+    if (type === "urgence" && idTourneeUrgente) {
       await supabase
         .from("tournee")
         .update({ acceptee_par_agent: true })
         .eq("id_tournee", idTourneeUrgente);
-
       setCreationLoading(false);
       router.push("/(agent)/tournee");
       return;
     }
 
     const pointsConcernes =
-      typeProposition === "immediate"
-        ? pointsPleins
-        : [...pointsPleins, ...pointsMoyens];
-
+      type === "immediate" ? pointsPleins : [...pointsPleins, ...pointsMoyens];
     if (pointsConcernes.length === 0) {
       setCreationLoading(false);
       return;
     }
 
     const date =
-      typeProposition === "immediate"
+      type === "immediate"
         ? new Date().toISOString().split("T")[0]
         : new Date(Date.now() + 86400000).toISOString().split("T")[0];
 
@@ -157,7 +146,7 @@ export default function AccueilAgent() {
         statut: "en_cours",
         acceptee_par_agent: true,
         notes:
-          typeProposition === "immediate"
+          type === "immediate"
             ? "Tournée immédiate — points pleins"
             : "Tournée planifiée — points pleins et en remplissage",
       })
@@ -183,311 +172,436 @@ export default function AccueilAgent() {
     router.push("/(agent)/tournee");
   }
 
+  const initiales = utilisateur?.nom?.charAt(0).toUpperCase() || "A";
+
   if (loading) {
     return (
       <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color="#1a5c99" />
+        <ActivityIndicator size="large" color={colors.teal} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.headerGreeting}>Bonjour</Text>
-            <Text style={styles.headerName}>{utilisateur?.nom}</Text>
-            <Text style={styles.headerSub}>Agent de terrain · Madina</Text>
-          </View>
-          <TouchableOpacity
-            onPress={handleDeconnexion}
-            style={styles.deconnexionBtn}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 110 }}
+      >
+        <View style={{ overflow: "hidden" }}>
+          {/* HERO */}
+          <LinearGradient
+            colors={["#2DD4BF", "#20B8C4", "#3B82F6", "#3B82F6", "#F4F5F8"]}
+            locations={[0, 0.25, 0.55, 0.72, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={{
+              paddingTop: 56,
+              paddingHorizontal: 24,
+              paddingBottom: 80,
+              overflow: "hidden",
+            }}
           >
-            <Text style={styles.deconnexionText}>Déconnexion</Text>
-          </TouchableOpacity>
-        </View>
+            <View
+              style={{
+                position: "absolute",
+                top: -60,
+                right: -40,
+                width: 200,
+                height: 200,
+                borderRadius: 999,
+                backgroundColor: "rgba(255,255,255,0.08)",
+              }}
+            />
+            <View
+              style={{
+                position: "absolute",
+                top: 70,
+                right: 90,
+                width: 90,
+                height: 90,
+                borderRadius: 999,
+                backgroundColor: "rgba(255,255,255,0.06)",
+              }}
+            />
 
-        <View style={styles.body}>
-          {tourneeEnCours ? (
-            <View style={[styles.propositionCard, styles.propositionVide]}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 8,
-                  marginBottom: 4,
-                }}
-              >
-                <Ionicons name="car" size={18} color="#1a8f69" />
-                <Text style={[styles.propositionTitle, { color: "#1a8f69" }]}>
-                  Tournée en cours
+            {/* HEADER */}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: 16,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.headerGreeting}>Bonjour 👋</Text>
+                <Text style={styles.headerName}>
+                  {utilisateur?.nom?.toUpperCase()}
                 </Text>
+                <Text style={styles.headerSub}>Agent de terrain · Madina</Text>
               </View>
-              <Text style={styles.propositionPoints}>
-                Vous avez déjà une tournée en cours. Rendez-vous dans
-                l&apos;onglet Tournée pour continuer.
-              </Text>
-              <TouchableOpacity
-                style={[styles.propositionBtn, { backgroundColor: "#1a8f69" }]}
-                onPress={() => router.push("/(agent)/tournee")}
-              >
-                <Text style={styles.propositionBtnText}>Voir ma tournée</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <>
-              <Text style={styles.cardLabel}>Propositions de tournées</Text>
 
-              {pointsPleins.length === 0 &&
-              pointsMoyens.length === 0 &&
-              tourneesUrgentes.length === 0 ? (
-                <View style={[styles.propositionCard, styles.propositionVide]}>
-                  <View
+              {/* AVATAR → paramètres */}
+              <TouchableOpacity
+                onPress={() => router.push("/(agent)/parametres")}
+              >
+                <View
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 999,
+                    backgroundColor: "rgba(255,255,255,0.18)",
+                    borderWidth: 1.5,
+                    borderColor: "rgba(255,255,255,0.45)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text
                     style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                      marginBottom: 4,
+                      fontFamily: "SpaceGrotesk_700Bold",
+                      fontSize: 17,
+                      color: "#FFFFFF",
                     }}
                   >
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={18}
-                      color="#1a8f69"
-                    />
-                    <Text
-                      style={[styles.propositionTitle, { color: "#1a8f69" }]}
+                    {initiales}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+
+          <View style={styles.body}>
+            {/* TOURNÉE EN COURS */}
+            {tourneeEnCours ? (
+              <View
+                style={[
+                  styles.propositionCard,
+                  {
+                    backgroundColor: colors.greenBg,
+                    borderColor: colors.green + "40",
+                  },
+                ]}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: 6,
+                  }}
+                >
+                  <Ionicons name="car" size={18} color={colors.green} />
+                  <Text
+                    style={[styles.propositionTitle, { color: colors.green }]}
+                  >
+                    Tournée en cours
+                  </Text>
+                </View>
+                <Text style={styles.propositionPoints}>
+                  Vous avez une tournée en cours. Rendez-vous dans l&apos;onglet
+                  Tournée pour continuer.
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.propositionBtn,
+                    { backgroundColor: colors.green },
+                  ]}
+                  onPress={() => router.push("/(agent)/tournee")}
+                >
+                  <Text style={styles.propositionBtnText}>Voir ma tournée</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.cardLabelHero}>
+                  Propositions de tournées
+                </Text>
+
+                {pointsPleins.length === 0 &&
+                pointsMoyens.length === 0 &&
+                tourneesUrgentes.length === 0 ? (
+                  <View
+                    style={[styles.propositionCard, styles.propositionVide]}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                        marginBottom: 6,
+                      }}
                     >
-                      Tout va bien
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={18}
+                        color={colors.green}
+                      />
+                      <Text
+                        style={[
+                          styles.propositionTitle,
+                          { color: colors.green },
+                        ]}
+                      >
+                        Tout va bien
+                      </Text>
+                    </View>
+                    <Text style={styles.propositionPoints}>
+                      Aucun point ne nécessite de collecte pour le moment.
                     </Text>
                   </View>
-                  <Text style={styles.propositionPoints}>
-                    Aucun point ne nécessite de collecte pour le moment.
-                  </Text>
-                </View>
-              ) : (
-                <>
-                  {tourneesUrgentes.map((tu) => (
-                    <View
-                      key={tu.id_tournee}
-                      style={[
-                        styles.propositionCard,
-                        { backgroundColor: "#f3e8fd", borderColor: "#d4b3f5" },
-                      ]}
-                    >
-                      <View style={styles.propositionHeader}>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                        >
-                          <Ionicons name="flash" size={18} color="#6a1a8b" />
-                          <Text
-                            style={[
-                              styles.propositionTitle,
-                              { color: "#6a1a8b" },
-                            ]}
-                          >
-                            Tournée urgente (Admin)
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.propositionBadge,
-                            { backgroundColor: "#fff" },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.propositionBadgeText,
-                              { color: "#6a1a8b" },
-                            ]}
-                          >
-                            {tu.tournee_point?.length || 0} point(s)
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.propositionPoints}>
-                        {tu.tournee_point
-                          ?.map((tp: any) => tp.point_collecte?.nom)
-                          .join(", ")}
-                        {tu.notes ? ` — ${tu.notes}` : ""}
-                      </Text>
-                      <TouchableOpacity
+                ) : (
+                  <>
+                    {tourneesUrgentes.map((tu) => (
+                      <View
+                        key={tu.id_tournee}
                         style={[
-                          styles.propositionBtn,
-                          { backgroundColor: "#6a1a8b" },
+                          styles.propositionCard,
+                          {
+                            backgroundColor: colors.purpleBg,
+                            borderColor: colors.purple + "40",
+                          },
                         ]}
-                        onPress={() =>
-                          accepterProposition("urgence", tu.id_tournee)
-                        }
-                        disabled={creationLoading}
                       >
-                        <Text style={styles.propositionBtnText}>
-                          {creationLoading
-                            ? "Chargement..."
-                            : "Accepter cette tournée"}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-
-                  {pointsPleins.length > 0 && (
-                    <View
-                      style={[styles.propositionCard, styles.propositionUrgent]}
-                    >
-                      <View style={styles.propositionHeader}>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                        >
-                          <Ionicons name="alert" size={18} color="#8b1a1a" />
-                          <Text
+                        <View style={styles.propositionHeader}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                          >
+                            <Ionicons
+                              name="flash"
+                              size={18}
+                              color={colors.purple}
+                            />
+                            <Text
+                              style={[
+                                styles.propositionTitle,
+                                { color: colors.purple },
+                              ]}
+                            >
+                              Tournée urgente (Admin)
+                            </Text>
+                          </View>
+                          <View
                             style={[
-                              styles.propositionTitle,
-                              { color: "#8b1a1a" },
+                              styles.propositionBadge,
+                              { backgroundColor: colors.bgCard },
                             ]}
                           >
-                            Tournée immédiate
-                          </Text>
+                            <Text
+                              style={[
+                                styles.propositionBadgeText,
+                                { color: colors.purple },
+                              ]}
+                            >
+                              {tu.tournee_point?.length || 0} point(s)
+                            </Text>
+                          </View>
                         </View>
-                        <View
+                        <Text style={styles.propositionPoints}>
+                          {tu.tournee_point
+                            ?.map((tp: any) => tp.point_collecte?.nom)
+                            .join(", ")}
+                          {tu.notes ? ` — ${tu.notes}` : ""}
+                        </Text>
+                        <TouchableOpacity
                           style={[
-                            styles.propositionBadge,
-                            { backgroundColor: "#fff" },
+                            styles.propositionBtn,
+                            { backgroundColor: colors.purple },
                           ]}
+                          onPress={() =>
+                            accepterProposition("urgence", tu.id_tournee)
+                          }
+                          disabled={creationLoading}
                         >
-                          <Text
-                            style={[
-                              styles.propositionBadgeText,
-                              { color: "#8b1a1a" },
-                            ]}
-                          >
-                            {pointsPleins.length} point(s)
+                          <Text style={styles.propositionBtnText}>
+                            {creationLoading
+                              ? "Chargement..."
+                              : "Accepter cette tournée"}
                           </Text>
-                        </View>
+                        </TouchableOpacity>
                       </View>
-                      <Text style={styles.propositionPoints}>
-                        {pointsPleins.map((p) => p.nom).join(", ")} — Plein(s),
-                        à vider aujourd&apos;hui.
-                      </Text>
-                      <TouchableOpacity
-                        style={[
-                          styles.propositionBtn,
-                          { backgroundColor: "#c0392b" },
-                        ]}
-                        onPress={() => accepterProposition("immediate")}
-                        disabled={creationLoading}
-                      >
-                        <Text style={styles.propositionBtnText}>
-                          {creationLoading
-                            ? "Création..."
-                            : "Accepter cette tournée"}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                    ))}
 
-                  {pointsMoyens.length > 0 && (
-                    <View
-                      style={[styles.propositionCard, styles.propositionDemain]}
-                    >
-                      <View style={styles.propositionHeader}>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                        >
-                          <Ionicons name="calendar" size={18} color="#7a4a00" />
-                          <Text
+                    {pointsPleins.length > 0 && (
+                      <View
+                        style={[
+                          styles.propositionCard,
+                          styles.propositionUrgent,
+                        ]}
+                      >
+                        <View style={styles.propositionHeader}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                          >
+                            <Ionicons
+                              name="alert"
+                              size={18}
+                              color={colors.red}
+                            />
+                            <Text
+                              style={[
+                                styles.propositionTitle,
+                                { color: colors.red },
+                              ]}
+                            >
+                              Tournée immédiate
+                            </Text>
+                          </View>
+                          <View
                             style={[
-                              styles.propositionTitle,
-                              { color: "#7a4a00" },
+                              styles.propositionBadge,
+                              { backgroundColor: colors.bgCard },
                             ]}
                           >
-                            Tournée demain
-                          </Text>
+                            <Text
+                              style={[
+                                styles.propositionBadgeText,
+                                { color: colors.red },
+                              ]}
+                            >
+                              {pointsPleins.length} point(s)
+                            </Text>
+                          </View>
                         </View>
-                        <View
+                        <Text style={styles.propositionPoints}>
+                          {pointsPleins.map((p) => p.nom).join(", ")} —
+                          Plein(s), à vider aujourd&apos;hui.
+                        </Text>
+                        <TouchableOpacity
                           style={[
-                            styles.propositionBadge,
-                            { backgroundColor: "#fff" },
+                            styles.propositionBtn,
+                            { backgroundColor: colors.red },
                           ]}
+                          onPress={() => accepterProposition("immediate")}
+                          disabled={creationLoading}
+                        >
+                          <Text style={styles.propositionBtnText}>
+                            {creationLoading
+                              ? "Création..."
+                              : "Accepter cette tournée"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
+                    {pointsMoyens.length > 0 && (
+                      <View
+                        style={[
+                          styles.propositionCard,
+                          styles.propositionDemain,
+                        ]}
+                      >
+                        <View style={styles.propositionHeader}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                          >
+                            <Ionicons
+                              name="calendar-outline"
+                              size={18}
+                              color={colors.amber}
+                            />
+                            <Text
+                              style={[
+                                styles.propositionTitle,
+                                { color: colors.amber },
+                              ]}
+                            >
+                              Tournée demain
+                            </Text>
+                          </View>
+                          <View
+                            style={[
+                              styles.propositionBadge,
+                              { backgroundColor: colors.bgCard },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.propositionBadgeText,
+                                { color: colors.amber },
+                              ]}
+                            >
+                              {pointsPleins.length + pointsMoyens.length}{" "}
+                              point(s)
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={styles.propositionPoints}>
+                          {[...pointsPleins, ...pointsMoyens]
+                            .map((p) => p.nom)
+                            .join(", ")}{" "}
+                          — Inclut les points pleins et en remplissage.
+                        </Text>
+                        <TouchableOpacity
+                          style={[
+                            styles.propositionBtn,
+                            { backgroundColor: colors.amber },
+                          ]}
+                          onPress={() => accepterProposition("demain")}
+                          disabled={creationLoading}
                         >
                           <Text
                             style={[
-                              styles.propositionBadgeText,
-                              { color: "#7a4a00" },
+                              styles.propositionBtnText,
+                              { color: "#0E1210" },
                             ]}
                           >
-                            {pointsPleins.length + pointsMoyens.length} point(s)
+                            {creationLoading
+                              ? "Création..."
+                              : "Planifier pour demain"}
                           </Text>
-                        </View>
+                        </TouchableOpacity>
                       </View>
-                      <Text style={styles.propositionPoints}>
-                        {[...pointsPleins, ...pointsMoyens]
-                          .map((p) => p.nom)
-                          .join(", ")}{" "}
-                        — Inclut les points pleins et en remplissage.
-                      </Text>
-                      <TouchableOpacity
-                        style={[
-                          styles.propositionBtn,
-                          { backgroundColor: "#e8a020" },
-                        ]}
-                        onPress={() => accepterProposition("demain")}
-                        disabled={creationLoading}
-                      >
-                        <Text style={styles.propositionBtnText}>
-                          {creationLoading
-                            ? "Création..."
-                            : "Planifier pour demain"}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </>
-              )}
-            </>
-          )}
+                    )}
+                  </>
+                )}
+              </>
+            )}
 
-          <View style={[styles.card, { marginTop: 8 }]}>
-            <Text style={styles.cardLabel}>État des points de collecte</Text>
-            {points.map((p, i) => {
-              const pct = getPct(p.id_point);
-              const statut = getStatut(p.id_point);
-              const isLast = i === points.length - 1;
-              return (
-                <View
-                  key={p.id_point}
-                  style={isLast ? styles.pointRowLast : styles.pointRow}
-                >
+            {/* ÉTAT DES POINTS */}
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>État des points de collecte</Text>
+              {points.map((p, i) => {
+                const pct = getPct(p.id_point);
+                const statut = getStatut(p.id_point);
+                const isLast = i === points.length - 1;
+                return (
                   <View
-                    style={[
-                      styles.statutDot,
-                      { backgroundColor: getCouleur(statut) },
-                    ]}
-                  />
-                  <View style={styles.pointInfo}>
-                    <Text style={styles.pointNom}>{p.nom}</Text>
-                    <Text style={styles.pointSecteur}>{p.secteur?.nom}</Text>
-                  </View>
-                  <Text
-                    style={[styles.pointPct, { color: getCouleur(statut) }]}
+                    key={p.id_point}
+                    style={isLast ? styles.pointRowLast : styles.pointRow}
                   >
-                    {pct}%
-                  </Text>
-                </View>
-              );
-            })}
+                    <View
+                      style={[
+                        styles.statutDot,
+                        { backgroundColor: getCouleur(statut) },
+                      ]}
+                    />
+                    <View style={styles.pointInfo}>
+                      <Text style={styles.pointNom}>{p.nom}</Text>
+                      <Text style={styles.pointSecteur}>{p.secteur?.nom}</Text>
+                    </View>
+                    <Text
+                      style={[styles.pointPct, { color: getCouleur(statut) }]}
+                    >
+                      {pct}%
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         </View>
       </ScrollView>
