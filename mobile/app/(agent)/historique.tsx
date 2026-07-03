@@ -8,8 +8,11 @@ import {
   Modal,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../supabase";
 import { styles } from "./historique.styles";
+import { colors } from "../theme";
 
 export default function HistoriqueAgent() {
   const [loading, setLoading] = useState(true);
@@ -24,7 +27,6 @@ export default function HistoriqueAgent() {
 
   async function fetchData() {
     setLoading(true);
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -61,74 +63,95 @@ export default function HistoriqueAgent() {
   if (loading) {
     return (
       <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color="#1a5c99" />
+        <ActivityIndicator size="large" color={colors.teal} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Mon historique</Text>
-          <Text style={styles.headerSub}>Tournées effectuées</Text>
-        </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 110 }}
+      >
+        <View style={{ overflow: "hidden" }}>
+          {/* HERO */}
+          <LinearGradient
+            colors={["#2DD4BF", "#20B8C4", "#3B82F6", "#3B82F6", "#F4F5F8"]}
+            locations={[0, 0.25, 0.55, 0.72, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={{ paddingTop: 56, paddingHorizontal: 24, paddingBottom: 80 }}
+          >
+            <Text style={styles.headerTitle}>Mon historique</Text>
+            <Text style={styles.headerSub}>Tournées effectuées</Text>
+          </LinearGradient>
 
-        <View style={styles.body}>
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statVal}>{tourneesMois.length}</Text>
-              <Text style={styles.statLabel}>Tournées ce mois</Text>
+          <View style={styles.body}>
+            {/* STATS */}
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <Text style={[styles.statVal, { color: colors.teal }]}>
+                  {tourneesMois.length}
+                </Text>
+                <Text style={styles.statLabel}>Tournées ce mois</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={[styles.statVal, { color: "#3B82F6" }]}>
+                  {tournees.length}
+                </Text>
+                <Text style={styles.statLabel}>Total tournées</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={[styles.statVal, { color: colors.green }]}>
+                  {totalPointsVides}
+                </Text>
+                <Text style={styles.statLabel}>Points vidés</Text>
+              </View>
             </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statVal}>{tournees.length}</Text>
-              <Text style={styles.statLabel}>Total tournées</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statVal}>{totalPointsVides}</Text>
-              <Text style={styles.statLabel}>Points vidés</Text>
-            </View>
-          </View>
 
-          <Text style={styles.sectionTitle}>Tournées récentes</Text>
-          {tournees.length === 0 ? (
-            <Text style={styles.empty}>Aucune tournée enregistrée</Text>
-          ) : (
-            tournees.map((t, i) => (
-              <TouchableOpacity
-                key={i}
-                style={styles.item}
-                onPress={() => setTourneeSelectionnee(t)}
-              >
-                <View style={styles.itemHeader}>
-                  <Text style={styles.itemDate}>
-                    {new Date(t.date).toLocaleDateString("fr-FR", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </Text>
-                  <View style={styles.itemBadge}>
-                    <Text style={styles.itemBadgeText}>
-                      {t.tournee_point?.length || 0} point(s)
+            {/* LISTE */}
+            <Text style={styles.sectionTitle}>Tournées récentes</Text>
+            {tournees.length === 0 ? (
+              <Text style={styles.empty}>Aucune tournée enregistrée</Text>
+            ) : (
+              tournees.map((t, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.item}
+                  onPress={() => setTourneeSelectionnee(t)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.itemHeader}>
+                    <Text style={styles.itemDate}>
+                      {new Date(t.date).toLocaleDateString("fr-FR", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                      })}
                     </Text>
+                    <View style={styles.itemBadge}>
+                      <Text style={styles.itemBadgeText}>
+                        {t.tournee_point?.length || 0} point(s)
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                {t.notes && <Text style={styles.itemNotes}>{t.notes}</Text>}
-                {t.tournee_point?.length > 0 && (
-                  <Text style={styles.itemNotes}>
-                    {t.tournee_point
-                      .map((tp: any) => tp.point_collecte?.nom)
-                      .join(", ")}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            ))
-          )}
+                  {t.notes && <Text style={styles.itemNotes}>{t.notes}</Text>}
+                  {t.tournee_point?.length > 0 && (
+                    <Text style={styles.itemNotes}>
+                      {t.tournee_point
+                        .map((tp: any) => tp.point_collecte?.nom)
+                        .join(", ")}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
         </View>
       </ScrollView>
 
-      {/* MODAL DETAIL */}
+      {/* MODAL DÉTAIL */}
       <Modal
         visible={tourneeSelectionnee !== null}
         transparent
@@ -138,13 +161,13 @@ export default function HistoriqueAgent() {
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.5)",
+            backgroundColor: "rgba(15,23,42,0.5)",
             justifyContent: "flex-end",
           }}
         >
           <View
             style={{
-              backgroundColor: "#fff",
+              backgroundColor: colors.bgCard,
               borderTopLeftRadius: 24,
               borderTopRightRadius: 24,
               padding: 24,
@@ -152,11 +175,21 @@ export default function HistoriqueAgent() {
               maxHeight: "75%",
             }}
           >
+            <View
+              style={{
+                width: 40,
+                height: 4,
+                backgroundColor: colors.border,
+                borderRadius: 999,
+                alignSelf: "center",
+                marginBottom: 16,
+              }}
+            />
             <Text
               style={{
+                fontFamily: "SpaceGrotesk_700Bold",
                 fontSize: 18,
-                fontWeight: "800",
-                color: "#0d1f16",
+                color: colors.textPrimary,
                 marginBottom: 4,
               }}
             >
@@ -166,7 +199,12 @@ export default function HistoriqueAgent() {
             </Text>
             {tourneeSelectionnee?.notes && (
               <Text
-                style={{ fontSize: 13, color: "#7a9c8a", marginBottom: 16 }}
+                style={{
+                  fontFamily: "InstrumentSans_400Regular",
+                  fontSize: 13,
+                  color: colors.textSecondary,
+                  marginBottom: 16,
+                }}
               >
                 {tourneeSelectionnee.notes}
               </Text>
@@ -181,54 +219,77 @@ export default function HistoriqueAgent() {
                     alignItems: "center",
                     paddingVertical: 10,
                     borderBottomWidth: 1,
-                    borderBottomColor: "#f0f4f9",
+                    borderBottomColor: colors.borderLight,
                   }}
                 >
                   <View>
                     <Text
                       style={{
+                        fontFamily: "InstrumentSans_600SemiBold",
                         fontSize: 13,
-                        fontWeight: "600",
-                        color: "#0d1f16",
+                        color: colors.textPrimary,
                       }}
                     >
                       {tp.point_collecte?.nom}
                     </Text>
-                    <Text style={{ fontSize: 11, color: "#7a9c8a" }}>
+                    <Text
+                      style={{
+                        fontFamily: "InstrumentSans_400Regular",
+                        fontSize: 11,
+                        color: colors.textSecondary,
+                      }}
+                    >
                       {tp.point_collecte?.secteur?.nom}
                     </Text>
                   </View>
-                  <Text
+                  <View
                     style={{
-                      fontSize: 11,
-                      color: "#1a8f69",
-                      fontWeight: "600",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 4,
                     }}
                   >
-                    {tp.heure_vidage
-                      ? new Date(tp.heure_vidage).toLocaleTimeString("fr-FR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "—"}
-                  </Text>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={14}
+                      color={colors.green}
+                    />
+                    <Text
+                      style={{
+                        fontFamily: "InstrumentSans_600SemiBold",
+                        fontSize: 11,
+                        color: colors.green,
+                      }}
+                    >
+                      {tp.heure_vidage
+                        ? new Date(tp.heure_vidage).toLocaleTimeString(
+                            "fr-FR",
+                            { hour: "2-digit", minute: "2-digit" },
+                          )
+                        : "—"}
+                    </Text>
+                  </View>
                 </View>
               ))}
             </ScrollView>
             <TouchableOpacity
               style={{
-                backgroundColor: "#f4f8fc",
-                borderRadius: 12,
+                backgroundColor: colors.bgPage,
+                borderRadius: 14,
                 padding: 14,
                 alignItems: "center",
                 marginTop: 12,
                 borderWidth: 1,
-                borderColor: "#e0eaf5",
+                borderColor: colors.border,
               }}
               onPress={() => setTourneeSelectionnee(null)}
             >
               <Text
-                style={{ fontSize: 14, fontWeight: "600", color: "#4a6a58" }}
+                style={{
+                  fontFamily: "InstrumentSans_600SemiBold",
+                  fontSize: 14,
+                  color: colors.textSecondary,
+                }}
               >
                 Fermer
               </Text>
