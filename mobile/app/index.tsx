@@ -14,7 +14,7 @@ import {
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "./supabase";
+import { supabase } from "./lib/supabase";
 
 export default function Login() {
   const [email, setEmail] = useState("");
