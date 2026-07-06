@@ -10,9 +10,9 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../supabase";
+import { supabase } from "../lib/supabase";
 import { styles } from "./accueil.styles";
-import { colors } from "../theme";
+import { colors } from "../lib/theme";
 
 export default function AccueilAgent() {
   const [loading, setLoading] = useState(true);
