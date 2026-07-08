@@ -11,7 +11,7 @@ import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../lib/supabase";
-import { styles } from "./accueil.styles";
+import { styles } from "./_styles/accueil.styles";
 import { colors } from "../lib/theme";
 
 export default function AccueilAgent() {
