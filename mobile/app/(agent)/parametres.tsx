@@ -12,9 +12,9 @@ import {
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../supabase";
-import { styles } from "./parametres.styles";
-import { colors } from "../theme";
+import { supabase } from "../lib/supabase";
+import { styles } from "./_styles/parametres.styles";
+import { colors } from "../lib/theme";
 
 export default function ParametresAgent() {
   const [loading, setLoading] = useState(true);
