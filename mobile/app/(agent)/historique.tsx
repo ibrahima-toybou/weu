@@ -10,9 +10,9 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../supabase";
-import { styles } from "./historique.styles";
-import { colors } from "../theme";
+import { supabase } from "../lib/supabase";
+import { styles } from "./_styles/historique.styles";
+import { colors } from "../lib/theme";
 
 export default function HistoriqueAgent() {
   const [loading, setLoading] = useState(true);
