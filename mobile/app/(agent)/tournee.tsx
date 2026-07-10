@@ -10,9 +10,9 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../supabase";
-import { styles } from "./tournee.styles";
-import { colors } from "../theme";
+import { supabase } from "../lib/supabase";
+import { styles } from "./_styles/tournee.styles";
+import { colors } from "../lib/theme";
 
 export default function Tournee() {
   const [loading, setLoading] = useState(true);
