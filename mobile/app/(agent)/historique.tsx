@@ -11,7 +11,7 @@ import { router, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../lib/supabase";
-import { styles } from "./_styles/historique.styles";
+import { styles } from "../../styles/agent/historique.styles";
 import { colors } from "../lib/theme";
 
 export default function HistoriqueAgent() {
