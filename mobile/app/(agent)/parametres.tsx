@@ -13,7 +13,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "../lib/supabase";
-import { styles } from "./_styles/parametres.styles";
+import { styles } from "../../styles/agent/parametres.styles";
 import { colors } from "../lib/theme";
 
 export default function ParametresAgent() {
