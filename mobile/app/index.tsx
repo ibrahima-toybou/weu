@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "./lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -31,28 +32,49 @@ export default function Login() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
 
-  // Vérifier si une session existe déjà au lancement
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
+    async function checkSession() {
+      // D'abord vérifier le cache — redirection instantanée
+      const cachedRole = await AsyncStorage.getItem("weu_user_role");
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session && cachedRole) {
+        if (cachedRole === "agent_terrain" || cachedRole === "super_admin") {
+          router.replace("/(agent)/accueil");
+        } else {
+          router.replace("/(tabs)/accueil");
+        }
+        return;
+      }
+
+      if (session && !cachedRole) {
+        // Première fois — besoin du réseau
         const { data: utilisateur } = await supabase
           .from("utilisateur")
           .select("role")
           .eq("auth_id", session.user.id)
           .single();
 
-        if (
-          utilisateur?.role === "agent_terrain" ||
-          utilisateur?.role === "super_admin"
-        ) {
-          router.replace("/(agent)/accueil");
-        } else {
-          router.replace("/(tabs)/accueil");
+        if (utilisateur?.role) {
+          await AsyncStorage.setItem("weu_user_role", utilisateur.role);
+          if (
+            utilisateur.role === "agent_terrain" ||
+            utilisateur.role === "super_admin"
+          ) {
+            router.replace("/(agent)/accueil");
+          } else {
+            router.replace("/(tabs)/accueil");
+          }
+          return;
         }
-      } else {
-        setCheckingSession(false);
       }
-    });
+
+      setCheckingSession(false);
+    }
+
+    checkSession();
   }, []);
 
   async function handleConnexion() {
@@ -81,6 +103,11 @@ export default function Login() {
       .select("role, id_menage")
       .eq("auth_id", user!.id)
       .single();
+
+    // Sauvegarder le rôle pour le mode offline
+    if (utilisateur?.role) {
+      await AsyncStorage.setItem("weu_user_role", utilisateur.role);
+    }
 
     if (utilisateur?.role === "habitant" && utilisateur?.id_menage) {
       const { data: menage } = await supabase
@@ -151,7 +178,6 @@ export default function Login() {
     setResetLoading(false);
   }
 
-  // Écran de chargement pendant la vérification de session
   if (checkingSession) {
     return (
       <View
@@ -298,7 +324,6 @@ export default function Login() {
               zIndex: 10,
             }}
           >
-            {/* EMAIL */}
             <Text
               style={{
                 fontFamily: "InstrumentSans_600SemiBold",
@@ -347,7 +372,6 @@ export default function Login() {
               />
             </View>
 
-            {/* MOT DE PASSE */}
             <Text
               style={{
                 fontFamily: "InstrumentSans_600SemiBold",
@@ -403,7 +427,6 @@ export default function Login() {
               </TouchableOpacity>
             </View>
 
-            {/* BOUTON CONNEXION */}
             <TouchableOpacity
               onPress={handleConnexion}
               disabled={loading}
@@ -442,7 +465,6 @@ export default function Login() {
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* MOT DE PASSE OUBLIÉ */}
             <TouchableOpacity
               style={{ marginTop: 18, alignItems: "center" }}
               onPress={() => setShowReset(true)}
@@ -459,7 +481,6 @@ export default function Login() {
             </TouchableOpacity>
           </View>
 
-          {/* FOOTER */}
           <View
             style={{
               marginTop: "auto",
