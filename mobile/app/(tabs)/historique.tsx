@@ -1,11 +1,13 @@
 import { useState, useCallback } from "react";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { router, useFocusEffect } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../supabase";
-import { styles } from "./historique.styles";
-import { colors } from "../theme";
+import { supabase } from "../lib/supabase";
+import { styles } from "../../styles/tabs/historique.styles";
+import { colors } from "../lib/theme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const CACHE_KEY = "weu_historique_cache";
 
 export default function Historique() {
   const [loading, setLoading] = useState(true);
@@ -20,57 +22,87 @@ export default function Historique() {
   );
 
   async function fetchData() {
-    setLoading(true);
+    // Cache d'abord
+    const cached = await AsyncStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const data = JSON.parse(cached);
+      setMenage(data.menage);
+      setPointages(data.pointages || []);
+      setCotisations(data.cotisations || []);
+      setLoading(false);
+    }
+
+    // Tenter le réseau
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
       router.replace("/");
       return;
     }
 
-    const { data: utilisateur } = await supabase
+    const { data: utilisateur, error } = await supabase
       .from("utilisateur")
       .select(
         "*, menage(id_menage, nom, date_inscription, point_collecte(nom))",
       )
-      .eq("auth_id", user.id)
+      .eq("auth_id", session.user.id)
       .single();
+
+    if (error || !utilisateur) {
+      if (!cached) setLoading(false);
+      return;
+    }
 
     setMenage(utilisateur?.menage);
     const idMenage = utilisateur?.menage?.id_menage;
 
+    let pointagesData: any[] = [];
+    let cotisationsData: any[] = [];
+
     if (idMenage) {
-      const { data: pointagesData } = await supabase
+      const { data: pData } = await supabase
         .from("pointage")
         .select("*, point_collecte(nom)")
         .eq("id_menage", idMenage)
         .order("date_heure", { ascending: false })
         .limit(10);
-      setPointages(pointagesData || []);
+      pointagesData = pData || [];
+      setPointages(pointagesData);
 
-      const { data: cotisationsData } = await supabase
+      const { data: cData } = await supabase
         .from("cotisation")
         .select("*")
         .eq("id_menage", idMenage)
         .order("periode", { ascending: false });
-      setCotisations(cotisationsData || []);
+      cotisationsData = cData || [];
+      setCotisations(cotisationsData);
     }
+
+    await AsyncStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({
+        menage: utilisateur?.menage,
+        pointages: pointagesData,
+        cotisations: cotisationsData,
+      }),
+    );
+
     setLoading(false);
   }
 
   function getNbMoisDepuisInscription() {
     if (!menage?.date_inscription) return 0;
     const inscription = new Date(menage.date_inscription);
-    const debutCotisation = new Date(
+    const debut = new Date(
       inscription.getFullYear(),
-      inscription.getMonth() + 1,
+      inscription.getMonth(),
       1,
     );
     const maintenant = new Date();
     const mois =
-      (maintenant.getFullYear() - debutCotisation.getFullYear()) * 12 +
-      (maintenant.getMonth() - debutCotisation.getMonth()) +
+      (maintenant.getFullYear() - debut.getFullYear()) * 12 +
+      (maintenant.getMonth() - debut.getMonth()) +
       1;
     return Math.max(0, mois);
   }
@@ -144,7 +176,6 @@ export default function Historique() {
         contentContainerStyle={{ paddingBottom: 110 }}
       >
         <View style={{ overflow: "hidden" }}>
-          {/* HERO */}
           <LinearGradient
             colors={["#2DD4BF", "#20B8C4", "#3B82F6", "#3B82F6", "#F4F5F8"]}
             locations={[0, 0.25, 0.55, 0.72, 1]}
@@ -157,7 +188,6 @@ export default function Historique() {
           </LinearGradient>
 
           <View style={styles.body}>
-            {/* STATS */}
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
                 <Text style={[styles.statVal, { color: colors.teal }]}>
@@ -179,7 +209,6 @@ export default function Historique() {
               </View>
             </View>
 
-            {/* DÉPÔTS RÉCENTS */}
             <Text style={styles.sectionTitle}>Mes dépôts récents</Text>
             {pointages.length === 0 ? (
               <Text style={styles.empty}>Aucun dépôt enregistré</Text>
@@ -209,7 +238,6 @@ export default function Historique() {
               })
             )}
 
-            {/* COTISATIONS */}
             <Text style={[styles.sectionTitle, { marginTop: 8 }]}>
               Mes cotisations
             </Text>
