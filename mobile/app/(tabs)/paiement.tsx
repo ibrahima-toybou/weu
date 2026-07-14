@@ -10,9 +10,12 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../supabase";
-import { styles } from "./paiement.styles";
-import { colors } from "../theme";
+import { supabase } from "../lib/supabase";
+import { styles } from "../../styles/tabs/paiement.styles";
+import { colors } from "../lib/theme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const CACHE_KEY = "weu_paiement_cache";
 
 export default function Paiement() {
   const [loading, setLoading] = useState(true);
@@ -28,22 +31,38 @@ export default function Paiement() {
   );
 
   async function fetchData() {
-    setLoading(true);
+    // Cache d'abord
+    const cached = await AsyncStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const data = JSON.parse(cached);
+      setMenage(data.menage);
+      setToutesCotisations(data.cotisations || []);
+      setMoisDisponibles(data.moisDisponibles || []);
+      setMoisSelectionne(data.moisSelectionne || "");
+      setLoading(false);
+    }
+
+    // Tenter le réseau
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
       router.replace("/");
       return;
     }
 
-    const { data: utilisateur } = await supabase
+    const { data: utilisateur, error } = await supabase
       .from("utilisateur")
       .select(
         "*, menage(id_menage, nom, date_inscription, point_collecte(nom), secteur(nom))",
       )
-      .eq("auth_id", user.id)
+      .eq("auth_id", session.user.id)
       .single();
+
+    if (error || !utilisateur) {
+      if (!cached) setLoading(false);
+      return;
+    }
 
     const menageData = utilisateur?.menage;
     setMenage(menageData);
@@ -64,7 +83,19 @@ export default function Paiement() {
       return !cot || cot.statut === "en_retard";
     });
 
-    setMoisSelectionne(premierNonPaye || mois[0] || "");
+    const selectedMois = premierNonPaye || mois[0] || "";
+    setMoisSelectionne(selectedMois);
+
+    await AsyncStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({
+        menage: menageData,
+        cotisations: cotisationsData || [],
+        moisDisponibles: mois,
+        moisSelectionne: selectedMois,
+      }),
+    );
+
     setLoading(false);
   }
 
@@ -73,7 +104,7 @@ export default function Paiement() {
     const inscription = new Date(dateInscription);
     const debut = new Date(
       inscription.getFullYear(),
-      inscription.getMonth() + 1,
+      inscription.getMonth(),
       1,
     );
     const maintenant = new Date();
@@ -208,7 +239,6 @@ export default function Paiement() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 110 }}
       >
-        {/* HERO HEADER — même style que accueil mais sans bulles */}
         <View style={{ overflow: "hidden" }}>
           <LinearGradient
             colors={["#2DD4BF", "#20B8C4", "#3B82F6", "#3B82F6", "#F4F5F8"]}
@@ -221,9 +251,7 @@ export default function Paiement() {
             <Text style={styles.headerSub}>{menage?.nom}</Text>
           </LinearGradient>
 
-          {/* CONTENU */}
           <View style={{ paddingHorizontal: 18, marginTop: -46, gap: 14 }}>
-            {/* STATS */}
             <View style={styles.statsRow}>
               <View
                 style={[
@@ -280,7 +308,6 @@ export default function Paiement() {
               </View>
             </View>
 
-            {/* NAVIGATEUR MOIS */}
             <View style={styles.moisNav}>
               <TouchableOpacity
                 onPress={() => naviguerMois("prev")}
@@ -301,9 +328,7 @@ export default function Paiement() {
                   {getMoisLabel(moisSelectionne)}
                 </Text>
                 {nbRetard > 0 && !cotisationSelectionnee?.statut && (
-                  <Text style={styles.moisSub}>
-                    Mois en retard affiché en priorité
-                  </Text>
+                  <Text style={styles.moisSub}>Mois non payé</Text>
                 )}
               </View>
               <TouchableOpacity
@@ -322,7 +347,6 @@ export default function Paiement() {
               </TouchableOpacity>
             </View>
 
-            {/* RÉCAPITULATIF */}
             <View style={styles.card}>
               <Text style={styles.cardLabel}>Récapitulatif</Text>
               <View style={styles.infoRow}>
@@ -359,7 +383,6 @@ export default function Paiement() {
               </View>
             </View>
 
-            {/* ACTION */}
             {cotisationSelectionnee?.statut === "payé" ? (
               <View
                 style={[
@@ -453,14 +476,13 @@ export default function Paiement() {
                   />
                   <Text style={styles.cashTitle}>Payer en cash</Text>
                   <Text style={styles.cashDesc}>
-                    Remettez 3 000 FC à l'agent de votre secteur. Il
+                    Remettez 3 000 FC à l&apos;agent de votre secteur. Il
                     enregistrera votre paiement dans le système.
                   </Text>
                 </View>
               </>
             )}
 
-            {/* LISTE TOUS LES MOIS */}
             <Text style={[styles.cardLabel, { marginTop: 8 }]}>
               Tous les mois
             </Text>
