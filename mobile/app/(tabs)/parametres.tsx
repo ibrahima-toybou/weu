@@ -8,13 +8,85 @@ import {
   Modal,
   TextInput,
   Alert,
+  Keyboard,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../supabase";
-import { styles } from "./parametres.styles";
-import { colors } from "../theme";
+import { supabase } from "../lib/supabase";
+import { styles } from "../../styles/tabs/parametres.styles";
+import { colors } from "../lib/theme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const CACHE_KEY = "weu_parametres_cache";
+
+function ModalCommun({
+  visible,
+  onClose,
+  title,
+  error,
+  success,
+  children,
+}: any) {
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View
+          style={[
+            styles.modalCard,
+            { marginBottom: keyboardHeight > 0 ? keyboardHeight : 0 },
+          ]}
+        >
+          <View
+            style={{
+              width: 40,
+              height: 4,
+              backgroundColor: colors.border,
+              borderRadius: 999,
+              alignSelf: "center",
+              marginBottom: 16,
+            }}
+          />
+          <Text style={styles.modalTitle}>{title}</Text>
+          {error ? (
+            <View style={styles.alertError}>
+              <Text style={styles.alertErrorText}>{error}</Text>
+            </View>
+          ) : null}
+          {success ? (
+            <View style={styles.alertSuccess}>
+              <Text style={styles.alertSuccessText}>{success}</Text>
+            </View>
+          ) : null}
+          {children}
+          <TouchableOpacity style={styles.modalBtnOutline} onPress={onClose}>
+            <Text style={styles.modalBtnOutlineText}>Annuler</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 export default function Parametres() {
   const [loading, setLoading] = useState(true);
@@ -37,23 +109,48 @@ export default function Parametres() {
   }, []);
 
   async function fetchData() {
-    setLoading(true);
+    // Cache d'abord
+    const cached = await AsyncStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const data = JSON.parse(cached);
+      setUtilisateur(data.utilisateur);
+      setMenage(data.menage);
+      setLoading(false);
+    }
+
+    // Tenter le réseau
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
       router.replace("/");
       return;
     }
-    const { data: utilisateurData } = await supabase
+
+    const { data: utilisateurData, error } = await supabase
       .from("utilisateur")
       .select(
         "*, menage(id_menage, nom, telephone, point_collecte(nom), secteur(nom))",
       )
-      .eq("auth_id", user.id)
+      .eq("auth_id", session.user.id)
       .single();
+
+    if (error || !utilisateurData) {
+      if (!cached) setLoading(false);
+      return;
+    }
+
     setUtilisateur(utilisateurData);
     setMenage(utilisateurData?.menage);
+
+    await AsyncStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({
+        utilisateur: utilisateurData,
+        menage: utilisateurData?.menage,
+      }),
+    );
+
     setLoading(false);
   }
 
@@ -162,45 +259,6 @@ export default function Parametres() {
     );
   }
 
-  const ModalCommun = ({ visible, onClose, title, children }: any) => (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
-          <View
-            style={{
-              width: 40,
-              height: 4,
-              backgroundColor: colors.border,
-              borderRadius: 999,
-              alignSelf: "center",
-              marginBottom: 16,
-            }}
-          />
-          <Text style={styles.modalTitle}>{title}</Text>
-          {error ? (
-            <View style={styles.alertError}>
-              <Text style={styles.alertErrorText}>{error}</Text>
-            </View>
-          ) : null}
-          {success ? (
-            <View style={styles.alertSuccess}>
-              <Text style={styles.alertSuccessText}>{success}</Text>
-            </View>
-          ) : null}
-          {children}
-          <TouchableOpacity style={styles.modalBtnOutline} onPress={onClose}>
-            <Text style={styles.modalBtnOutlineText}>Annuler</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
   return (
     <View style={styles.container}>
       <ScrollView
@@ -208,7 +266,6 @@ export default function Parametres() {
         contentContainerStyle={{ paddingBottom: 110 }}
       >
         <View style={{ overflow: "hidden" }}>
-          {/* HERO */}
           <LinearGradient
             colors={["#2DD4BF", "#20B8C4", "#3B82F6", "#3B82F6", "#F4F5F8"]}
             locations={[0, 0.25, 0.55, 0.72, 1]}
@@ -221,7 +278,6 @@ export default function Parametres() {
           </LinearGradient>
 
           <View style={styles.body}>
-            {/* PROFIL */}
             <View style={styles.profilCard}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{initiales}</Text>
@@ -233,7 +289,6 @@ export default function Parametres() {
               </Text>
             </View>
 
-            {/* INFOS PERSONNELLES */}
             <Text style={styles.sectionTitle}>Informations personnelles</Text>
             <View style={styles.menuCard}>
               <TouchableOpacity
@@ -264,7 +319,6 @@ export default function Parametres() {
                   color={colors.border}
                 />
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => {
@@ -294,7 +348,6 @@ export default function Parametres() {
                   color={colors.border}
                 />
               </TouchableOpacity>
-
               <TouchableOpacity style={styles.menuItemLast} disabled>
                 <View
                   style={[styles.menuIcon, { backgroundColor: colors.bgPage }]}
@@ -312,7 +365,6 @@ export default function Parametres() {
               </TouchableOpacity>
             </View>
 
-            {/* SÉCURITÉ */}
             <Text style={styles.sectionTitle}>Sécurité</Text>
             <View style={styles.menuCard}>
               <TouchableOpacity
@@ -346,7 +398,6 @@ export default function Parametres() {
               </TouchableOpacity>
             </View>
 
-            {/* MON MÉNAGE */}
             <Text style={styles.sectionTitle}>Mon ménage</Text>
             <View style={styles.menuCard}>
               <TouchableOpacity style={styles.menuItem} disabled>
@@ -394,7 +445,6 @@ export default function Parametres() {
               </TouchableOpacity>
             </View>
 
-            {/* DÉCONNEXION */}
             <TouchableOpacity
               style={styles.deconnexionBtn}
               onPress={handleDeconnexion}
@@ -415,11 +465,12 @@ export default function Parametres() {
         </View>
       </ScrollView>
 
-      {/* MODAL NOM */}
       <ModalCommun
         visible={showNom}
         onClose={() => setShowNom(false)}
         title="Modifier le nom"
+        error={error}
+        success={success}
       >
         <Text style={styles.modalLabel}>Nouveau nom</Text>
         <TextInput
@@ -447,11 +498,12 @@ export default function Parametres() {
         </TouchableOpacity>
       </ModalCommun>
 
-      {/* MODAL TÉLÉPHONE */}
       <ModalCommun
         visible={showTel}
         onClose={() => setShowTel(false)}
         title="Modifier le téléphone"
+        error={error}
+        success={success}
       >
         <Text style={styles.modalLabel}>Numéro de téléphone</Text>
         <TextInput
@@ -480,11 +532,12 @@ export default function Parametres() {
         </TouchableOpacity>
       </ModalCommun>
 
-      {/* MODAL MOT DE PASSE */}
       <ModalCommun
         visible={showMdp}
         onClose={() => setShowMdp(false)}
         title="Changer le mot de passe"
+        error={error}
+        success={success}
       >
         <Text style={styles.modalLabel}>Ancien mot de passe</Text>
         <TextInput
