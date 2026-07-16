@@ -59,20 +59,11 @@ function Login() {
           <div className={styles.brandBubble2} />
 
           <div className={styles.brandTop}>
-            <div className={styles.logoTile}>
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#FFFFFF"
-                strokeWidth="1.7"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M11 20C7 20 4 17 4 13c0-1.6.5-3 1.3-4.2C8 12 11 13 12 16c0-4 2-7 6-9.5C18.6 8 19 10 19 12c0 4.5-3.5 8-8 8z" />
-              </svg>
-            </div>
+            <img
+              src="/icon.png"
+              alt="Weu"
+              style={{ width: 46, height: 46, borderRadius: 14 }}
+            />
             <span className={styles.logoText}>Weu</span>
           </div>
 
@@ -103,7 +94,6 @@ function Login() {
           </p>
 
           <form onSubmit={handleLogin}>
-            {/* EMAIL */}
             <label className={styles.fieldLabel}>Email</label>
             <div
               className={`${styles.fieldWrap} ${emailFocus ? styles.fieldWrapFocus : ""}`}
@@ -133,7 +123,6 @@ function Login() {
               />
             </div>
 
-            {/* MOT DE PASSE */}
             <label className={styles.fieldLabel}>Mot de passe</label>
             <div
               className={`${styles.fieldWrap} ${pwFocus ? styles.fieldWrapFocus : ""}`}
@@ -199,7 +188,6 @@ function Login() {
               </button>
             </div>
 
-            {/* OPTIONS */}
             <div className={styles.options}>
               <label
                 className={styles.remember}
@@ -225,19 +213,13 @@ function Login() {
                 </span>
                 Se souvenir de moi
               </label>
-              <button
-                type="button"
-                className={styles.forgotBtn}
-                onClick={() => navigate("/reset-password")}
-              >
+              <button type="button" className={styles.forgotBtn}>
                 Mot de passe oublié ?
               </button>
             </div>
 
-            {/* ERREUR */}
             {error && <div className={styles.errorBox}>{error}</div>}
 
-            {/* BOUTON */}
             <button
               type="submit"
               disabled={loading}
