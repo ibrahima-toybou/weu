@@ -43,7 +43,11 @@ function Layout({ children }) {
         {/* Logo */}
         <div className={styles.logo}>
           <div className={styles.logoIcon}>
-            <ion-icon name="leaf"></ion-icon>
+            <img
+              src="/icon.png"
+              alt="Weu"
+              style={{ width: 38, height: 38, borderRadius: 11 }}
+            />
           </div>
           <div className={styles.logoText}>
             <div className={styles.logoName}>Weu</div>
