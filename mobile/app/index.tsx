@@ -10,11 +10,12 @@ import {
   Platform,
   ScrollView,
   Modal,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "./lib/supabase";
+import { supabase } from "../lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Login() {
@@ -34,46 +35,30 @@ export default function Login() {
 
   useEffect(() => {
     async function checkSession() {
-      // D'abord vérifier le cache — redirection instantanée
       const cachedRole = await AsyncStorage.getItem("weu_user_role");
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
 
-      if (session && cachedRole) {
-        if (cachedRole === "agent_terrain" || cachedRole === "super_admin") {
-          router.replace("/(agent)/accueil");
-        } else {
-          router.replace("/(tabs)/accueil");
-        }
+      if (!cachedRole) {
+        setCheckingSession(false);
         return;
       }
 
-      if (session && !cachedRole) {
-        // Première fois — besoin du réseau
-        const { data: utilisateur } = await supabase
-          .from("utilisateur")
-          .select("role")
-          .eq("auth_id", session.user.id)
-          .single();
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-        if (utilisateur?.role) {
-          await AsyncStorage.setItem("weu_user_role", utilisateur.role);
-          if (
-            utilisateur.role === "agent_terrain" ||
-            utilisateur.role === "super_admin"
-          ) {
+        if (session && cachedRole) {
+          if (cachedRole === "agent_terrain" || cachedRole === "super_admin") {
             router.replace("/(agent)/accueil");
           } else {
             router.replace("/(tabs)/accueil");
           }
           return;
         }
-      }
+      } catch {}
 
       setCheckingSession(false);
     }
-
     checkSession();
   }, []);
 
@@ -104,7 +89,6 @@ export default function Login() {
       .eq("auth_id", user!.id)
       .single();
 
-    // Sauvegarder le rôle pour le mode offline
     if (utilisateur?.role) {
       await AsyncStorage.setItem("weu_user_role", utilisateur.role);
     }
@@ -196,7 +180,7 @@ export default function Login() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: "#F4F5F8" }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1 }}
@@ -265,23 +249,23 @@ export default function Login() {
             >
               <View
                 style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: 22,
-                  backgroundColor: "rgba(255,255,255,0.18)",
-                  borderWidth: 1.5,
-                  borderColor: "rgba(255,255,255,0.42)",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  width: 90,
+                  height: 90,
+                  borderRadius: 24,
                   shadowColor: "#0B5763",
                   shadowOffset: { width: 0, height: 14 },
                   shadowOpacity: 0.28,
                   shadowRadius: 30,
                   elevation: 8,
                   marginBottom: 18,
+                  overflow: "hidden",
                 }}
               >
-                <Ionicons name="leaf-outline" size={36} color="#FFFFFF" />
+                <Image
+                  source={require("../assets/images/icon.png")}
+                  style={{ width: 90, height: 90 }}
+                  resizeMode="cover"
+                />
               </View>
               <Text
                 style={{
