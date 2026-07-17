@@ -101,10 +101,12 @@ function Cotisations() {
       .eq("auth_id", user.id)
       .single();
 
+    const datePaiement =
+      statut === "payé" ? new Date().toISOString().split("T")[0] : null;
+
     const payload = {
       statut,
-      date_paiement:
-        statut === "payé" ? new Date().toISOString().split("T")[0] : null,
+      date_paiement: datePaiement,
       montant: statut === "exonéré" ? 0 : 3000,
       mode_paiement: statut === "payé" ? "cash" : null,
       id_utilisateur: utilisateur.id_utilisateur,
@@ -122,6 +124,37 @@ function Cotisations() {
         ...payload,
       });
     }
+
+    // Envoyer le reçu par email si payé
+    if (statut === "payé") {
+      const { data: menageData } = await supabase
+        .from("menage")
+        .select("nom, point_collecte(nom), secteur(nom)")
+        .eq("id_menage", popupModifier.id_menage)
+        .single();
+
+      const { data: emailData } = await supabase
+        .from("utilisateur")
+        .select("email")
+        .eq("id_menage", popupModifier.id_menage)
+        .single();
+
+      if (emailData?.email) {
+        await supabase.functions.invoke("envoyer-facture", {
+          body: {
+            nom_menage: menageData?.nom || popupModifier.nom,
+            email: emailData.email,
+            periode: periodeDebut,
+            montant: 3000,
+            date_paiement: datePaiement,
+            mode_paiement: "cash",
+            point_collecte: menageData?.point_collecte?.nom || "",
+            secteur: menageData?.secteur?.nom || "",
+          },
+        });
+      }
+    }
+
     setPopupModifier(null);
     fetchData();
   }
