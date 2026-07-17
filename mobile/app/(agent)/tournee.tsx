@@ -10,9 +10,12 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { styles } from "../../styles/agent/tournee.styles";
-import { colors } from "../lib/theme";
+import { colors } from "../../lib/theme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const CACHE_KEY = "weu_agent_tournee_cache";
 
 export default function Tournee() {
   const [loading, setLoading] = useState(true);
@@ -30,20 +33,36 @@ export default function Tournee() {
   );
 
   async function fetchData() {
-    setLoading(true);
+    // Cache d'abord
+    const cached = await AsyncStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const data = JSON.parse(cached);
+      setUtilisateur(data.utilisateur);
+      setTournee(data.tournee);
+      setPointsTournee(data.pointsTournee || []);
+      setLoading(false);
+    }
+
+    // Tenter le réseau
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
       router.replace("/");
       return;
     }
 
-    const { data: utilisateurData } = await supabase
+    const { data: utilisateurData, error } = await supabase
       .from("utilisateur")
       .select("*")
-      .eq("auth_id", user.id)
+      .eq("auth_id", session.user.id)
       .single();
+
+    if (error || !utilisateurData) {
+      if (!cached) setLoading(false);
+      return;
+    }
+
     setUtilisateur(utilisateurData);
 
     const { data: tourneeActiveData } = await supabase
@@ -57,6 +76,16 @@ export default function Tournee() {
 
     setTournee(tourneeActiveData || null);
     setPointsTournee(tourneeActiveData?.tournee_point || []);
+
+    await AsyncStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({
+        utilisateur: utilisateurData,
+        tournee: tourneeActiveData || null,
+        pointsTournee: tourneeActiveData?.tournee_point || [],
+      }),
+    );
+
     setLoading(false);
   }
 
