@@ -10,9 +10,12 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { styles } from "../../styles/agent/accueil.styles";
-import { colors } from "../lib/theme";
+import { colors } from "../../lib/theme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const CACHE_KEY = "weu_agent_accueil_cache";
 
 export default function AccueilAgent() {
   const [loading, setLoading] = useState(true);
@@ -31,20 +34,37 @@ export default function AccueilAgent() {
   );
 
   async function fetchData() {
-    setLoading(true);
+    const cached = await AsyncStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const data = JSON.parse(cached);
+      setUtilisateur(data.utilisateur);
+      setPoints(data.points || []);
+      setPointages(data.pointages || []);
+      setMenages(data.menages || []);
+      setTourneeEnCours(data.tourneeEnCours);
+      setTourneesUrgentes(data.tourneesUrgentes || []);
+      setLoading(false);
+    }
+
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
       router.replace("/");
       return;
     }
 
-    const { data: utilisateurData } = await supabase
+    const { data: utilisateurData, error } = await supabase
       .from("utilisateur")
       .select("*")
-      .eq("auth_id", user.id)
+      .eq("auth_id", session.user.id)
       .single();
+
+    if (error || !utilisateurData) {
+      if (!cached) setLoading(false);
+      return;
+    }
+
     setUtilisateur(utilisateurData);
 
     const [pointsRes, pointagesRes, menagesRes] = await Promise.all([
@@ -77,6 +97,18 @@ export default function AccueilAgent() {
       .eq("acceptee_par_agent", false)
       .order("date", { ascending: true });
     setTourneesUrgentes(tourneesAdminData || []);
+
+    await AsyncStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({
+        utilisateur: utilisateurData,
+        points: pointsRes.data || [],
+        pointages: pointagesRes.data || [],
+        menages: menagesRes.data || [],
+        tourneeEnCours: tourneeEnCoursData || null,
+        tourneesUrgentes: tourneesAdminData || [],
+      }),
+    );
 
     setLoading(false);
   }
@@ -115,61 +147,75 @@ export default function AccueilAgent() {
   ) {
     setCreationLoading(true);
 
-    if (type === "urgence" && idTourneeUrgente) {
-      await supabase
+    try {
+      if (type === "urgence" && idTourneeUrgente) {
+        const { error } = await supabase
+          .from("tournee")
+          .update({ acceptee_par_agent: true })
+          .eq("id_tournee", idTourneeUrgente);
+        if (error) throw error;
+        setCreationLoading(false);
+        router.push("/(agent)/tournee");
+        return;
+      }
+
+      const pointsConcernes =
+        type === "immediate"
+          ? pointsPleins
+          : [...pointsPleins, ...pointsMoyens];
+      if (pointsConcernes.length === 0) {
+        setCreationLoading(false);
+        return;
+      }
+
+      const date =
+        type === "immediate"
+          ? new Date().toISOString().split("T")[0]
+          : new Date(Date.now() + 86400000).toISOString().split("T")[0];
+
+      const { data: tournee, error } = await supabase
         .from("tournee")
-        .update({ acceptee_par_agent: true })
-        .eq("id_tournee", idTourneeUrgente);
+        .insert({
+          date,
+          id_utilisateur: utilisateur.id_utilisateur,
+          cree_par: utilisateur.id_utilisateur,
+          statut: "en_cours",
+          acceptee_par_agent: true,
+          notes:
+            type === "immediate"
+              ? "Tournée immédiate — points pleins"
+              : "Tournée planifiée — points pleins et en remplissage",
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      for (const p of pointsConcernes) {
+        await supabase.from("tournee_point").insert({
+          id_tournee: tournee.id_tournee,
+          id_point: p.id_point,
+          heure_vidage: null,
+          nb_pointages_au_vidage: getNbPointages(p.id_point),
+        });
+      }
+
       setCreationLoading(false);
       router.push("/(agent)/tournee");
-      return;
-    }
-
-    const pointsConcernes =
-      type === "immediate" ? pointsPleins : [...pointsPleins, ...pointsMoyens];
-    if (pointsConcernes.length === 0) {
+    } catch (err: any) {
       setCreationLoading(false);
-      return;
+      if (
+        err?.message?.includes("Network request failed") ||
+        err?.message?.includes("network")
+      ) {
+        Alert.alert(
+          "Pas de connexion",
+          "Cette action nécessite une connexion internet. Réessayez quand le réseau sera disponible.",
+        );
+      } else {
+        Alert.alert("Erreur", err?.message || "Une erreur est survenue");
+      }
     }
-
-    const date =
-      type === "immediate"
-        ? new Date().toISOString().split("T")[0]
-        : new Date(Date.now() + 86400000).toISOString().split("T")[0];
-
-    const { data: tournee, error } = await supabase
-      .from("tournee")
-      .insert({
-        date,
-        id_utilisateur: utilisateur.id_utilisateur,
-        cree_par: utilisateur.id_utilisateur,
-        statut: "en_cours",
-        acceptee_par_agent: true,
-        notes:
-          type === "immediate"
-            ? "Tournée immédiate — points pleins"
-            : "Tournée planifiée — points pleins et en remplissage",
-      })
-      .select()
-      .single();
-
-    if (error) {
-      Alert.alert("Erreur", error.message);
-      setCreationLoading(false);
-      return;
-    }
-
-    for (const p of pointsConcernes) {
-      await supabase.from("tournee_point").insert({
-        id_tournee: tournee.id_tournee,
-        id_point: p.id_point,
-        heure_vidage: null,
-        nb_pointages_au_vidage: getNbPointages(p.id_point),
-      });
-    }
-
-    setCreationLoading(false);
-    router.push("/(agent)/tournee");
   }
 
   const initiales = utilisateur?.nom?.charAt(0).toUpperCase() || "A";
@@ -189,7 +235,6 @@ export default function AccueilAgent() {
         contentContainerStyle={{ paddingBottom: 110 }}
       >
         <View style={{ overflow: "hidden" }}>
-          {/* HERO */}
           <LinearGradient
             colors={["#2DD4BF", "#20B8C4", "#3B82F6", "#3B82F6", "#F4F5F8"]}
             locations={[0, 0.25, 0.55, 0.72, 1]}
@@ -225,7 +270,6 @@ export default function AccueilAgent() {
               }}
             />
 
-            {/* HEADER */}
             <View
               style={{
                 flexDirection: "row",
@@ -241,8 +285,6 @@ export default function AccueilAgent() {
                 </Text>
                 <Text style={styles.headerSub}>Agent de terrain · Madina</Text>
               </View>
-
-              {/* AVATAR → paramètres */}
               <TouchableOpacity
                 onPress={() => router.push("/(agent)/parametres")}
               >
@@ -273,7 +315,6 @@ export default function AccueilAgent() {
           </LinearGradient>
 
           <View style={styles.body}>
-            {/* TOURNÉE EN COURS */}
             {tourneeEnCours ? (
               <View
                 style={[
@@ -571,7 +612,6 @@ export default function AccueilAgent() {
               </>
             )}
 
-            {/* ÉTAT DES POINTS */}
             <View style={styles.card}>
               <Text style={styles.cardLabel}>État des points de collecte</Text>
               {points.map((p, i) => {
