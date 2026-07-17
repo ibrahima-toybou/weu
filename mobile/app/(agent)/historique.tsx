@@ -10,9 +10,12 @@ import {
 import { router, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { styles } from "../../styles/agent/historique.styles";
-import { colors } from "../lib/theme";
+import { colors } from "../../lib/theme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const CACHE_KEY = "weu_agent_historique_cache";
 
 export default function HistoriqueAgent() {
   const [loading, setLoading] = useState(true);
@@ -26,20 +29,33 @@ export default function HistoriqueAgent() {
   );
 
   async function fetchData() {
-    setLoading(true);
+    // Cache d'abord
+    const cached = await AsyncStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const data = JSON.parse(cached);
+      setTournees(data.tournees || []);
+      setLoading(false);
+    }
+
+    // Tenter le réseau
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
       router.replace("/");
       return;
     }
 
-    const { data: utilisateur } = await supabase
+    const { data: utilisateur, error } = await supabase
       .from("utilisateur")
       .select("id_utilisateur")
-      .eq("auth_id", user.id)
+      .eq("auth_id", session.user.id)
       .single();
+
+    if (error || !utilisateur) {
+      if (!cached) setLoading(false);
+      return;
+    }
 
     const { data: tourneesData } = await supabase
       .from("tournee")
@@ -50,6 +66,14 @@ export default function HistoriqueAgent() {
       .limit(20);
 
     setTournees(tourneesData || []);
+
+    await AsyncStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({
+        tournees: tourneesData || [],
+      }),
+    );
+
     setLoading(false);
   }
 
