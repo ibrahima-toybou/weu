@@ -12,14 +12,14 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import NetInfo from "@react-native-community/netinfo";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import {
   ajouterPointage,
   syncPointages,
   getNbEnAttente,
   sauvegarderCache,
   chargerCache,
-} from "../lib/offlineQueue";
+} from "../../lib/offlineQueue";
 import { styles } from "../../styles/tabs/accueil.styles";
 
 export default function Accueil() {
