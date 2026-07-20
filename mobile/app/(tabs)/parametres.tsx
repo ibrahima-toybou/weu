@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,13 +9,14 @@ import {
   TextInput,
   Alert,
   Keyboard,
+  Animated,
 } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { styles } from "../../styles/tabs/parametres.styles";
-import { colors } from "../lib/theme";
+import { colors } from "../../lib/theme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CACHE_KEY = "weu_parametres_cache";
@@ -28,21 +29,6 @@ function ModalCommun({
   success,
   children,
 }: any) {
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboardHeight(0);
-    });
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
   return (
     <Modal
       visible={visible}
@@ -51,12 +37,7 @@ function ModalCommun({
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View
-          style={[
-            styles.modalCard,
-            { marginBottom: keyboardHeight > 0 ? keyboardHeight : 0 },
-          ]}
-        >
+        <View style={styles.modalCard}>
           <View
             style={{
               width: 40,
@@ -109,7 +90,6 @@ export default function Parametres() {
   }, []);
 
   async function fetchData() {
-    // Cache d'abord
     const cached = await AsyncStorage.getItem(CACHE_KEY);
     if (cached) {
       const data = JSON.parse(cached);
@@ -118,7 +98,6 @@ export default function Parametres() {
       setLoading(false);
     }
 
-    // Tenter le réseau
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -171,6 +150,15 @@ export default function Parametres() {
       setSuccess("Nom modifié !");
       setShowNom(false);
       setNouveauNom("");
+      const updatedMenage = { ...menage, nom: nouveauNom };
+      setMenage(updatedMenage);
+      await AsyncStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({
+          utilisateur,
+          menage: updatedMenage,
+        }),
+      );
       fetchData();
     }
     setSaving(false);
@@ -193,6 +181,15 @@ export default function Parametres() {
       setSuccess("Téléphone modifié !");
       setShowTel(false);
       setNouveauTel("");
+      const updatedMenage = { ...menage, telephone: nouveauTel };
+      setMenage(updatedMenage);
+      await AsyncStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({
+          utilisateur,
+          menage: updatedMenage,
+        }),
+      );
       fetchData();
     }
     setSaving(false);
@@ -242,14 +239,27 @@ export default function Parametres() {
         text: "Déconnexion",
         style: "destructive",
         onPress: async () => {
-          await supabase.auth.signOut();
+          await AsyncStorage.multiRemove([
+            "weu_user_role",
+            "weu_accueil_cache",
+            "weu_offline_pointages",
+            "weu_finances_cache",
+            "weu_historique_cache",
+            "weu_paiement_cache",
+            "weu_parametres_cache",
+            "weu_agent_accueil_cache",
+            "weu_agent_tournee_cache",
+            "weu_agent_historique_cache",
+            "weu_agent_parametres_cache",
+          ]);
           router.replace("/");
+          supabase.auth.signOut({ scope: "local" }).catch(() => {});
         },
       },
     ]);
   }
 
-  const initiales = utilisateur?.nom?.charAt(0).toUpperCase() || "U";
+  const initiales = menage?.nom?.charAt(0).toUpperCase() || "U";
 
   if (loading) {
     return (
@@ -282,7 +292,7 @@ export default function Parametres() {
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{initiales}</Text>
               </View>
-              <Text style={styles.profilNom}>{utilisateur?.nom}</Text>
+              <Text style={styles.profilNom}>{menage?.nom}</Text>
               <Text style={styles.profilEmail}>{utilisateur?.email}</Text>
               <Text style={styles.profilPoint}>
                 {menage?.point_collecte?.nom} · {menage?.secteur?.nom}
@@ -294,7 +304,7 @@ export default function Parametres() {
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={() => {
-                  setNouveauNom(utilisateur?.nom || "");
+                  setNouveauNom(menage?.nom || "");
                   setError("");
                   setSuccess("");
                   setShowNom(true);
@@ -311,7 +321,7 @@ export default function Parametres() {
                 </View>
                 <View style={styles.menuContent}>
                   <Text style={styles.menuLabel}>Nom</Text>
-                  <Text style={styles.menuSub}>{utilisateur?.nom}</Text>
+                  <Text style={styles.menuSub}>{menage?.nom}</Text>
                 </View>
                 <Ionicons
                   name="chevron-forward"
