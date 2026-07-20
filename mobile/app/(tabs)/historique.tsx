@@ -2,9 +2,9 @@ import { useState, useCallback } from "react";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { styles } from "../../styles/tabs/historique.styles";
-import { colors } from "../lib/theme";
+import { colors } from "../../lib/theme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CACHE_KEY = "weu_historique_cache";
