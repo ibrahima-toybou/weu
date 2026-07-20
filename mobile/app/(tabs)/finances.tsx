@@ -10,9 +10,9 @@ import {
 import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { supabase } from "../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { styles } from "../../styles/tabs/finances.styles";
-import { colors } from "../lib/theme";
+import { colors } from "../../lib/theme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CACHE_KEY = "weu_finances_cache";
