@@ -18,14 +18,18 @@ function Points() {
   const [seuilPoint, setSeuilPoint] = useState(60);
   const [errorForm, setErrorForm] = useState("");
   const [successForm, setSuccessForm] = useState("");
-  const [pointSelectionne, setPointSelectionne] = useState(null);
+  const [historique, setHistorique] = useState([]);
+
+  // Popup détail
+  const [pointDetail, setPointDetail] = useState(null);
   const [modeEdition, setModeEdition] = useState(false);
   const [nomEdit, setNomEdit] = useState("");
   const [adresseEdit, setAdresseEdit] = useState("");
   const [secteurEdit, setSecteurEdit] = useState("");
   const [successEdit, setSuccessEdit] = useState("");
   const [errorEdit, setErrorEdit] = useState("");
-  const [historique, setHistorique] = useState([]);
+  const [menagesAssignes, setMenagesAssignes] = useState([]);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -112,6 +116,32 @@ function Points() {
     );
   }
 
+  async function ouvrirDetail(p) {
+    setPointDetail(p);
+    setModeEdition(false);
+    setNomEdit(p.nom);
+    setAdresseEdit(p.adresse || "");
+    setSecteurEdit(String(p.id_secteur));
+    setSuccessEdit("");
+    setErrorEdit("");
+    setDetailLoading(true);
+
+    const { data: menagesData } = await supabase
+      .from("menage")
+      .select("id_menage, nom, telephone, statut")
+      .eq("id_point", p.id_point)
+      .order("nom");
+
+    setMenagesAssignes(menagesData || []);
+    setDetailLoading(false);
+  }
+
+  function fermerDetail() {
+    setPointDetail(null);
+    setMenagesAssignes([]);
+    setModeEdition(false);
+  }
+
   async function confirmerVidage() {
     if (!pointAVider) return;
 
@@ -124,7 +154,6 @@ function Points() {
       .eq("auth_id", user.id)
       .single();
 
-    // Créer une tournée terminée (vidage manuel admin)
     const { data: tournee } = await supabase
       .from("tournee")
       .insert({
@@ -155,6 +184,7 @@ function Points() {
 
     setSuccessVidage(`Point ${pointAVider.nom} vidé avec succès !`);
     setPointAVider(null);
+    fermerDetail();
     fetchData();
     setTimeout(() => setSuccessVidage(""), 4000);
   }
@@ -188,16 +218,6 @@ function Points() {
     }
   }
 
-  function ouvrirPopupPoint(p) {
-    setPointSelectionne(p);
-    setModeEdition(false);
-    setNomEdit(p.nom);
-    setAdresseEdit(p.adresse || "");
-    setSecteurEdit(String(p.id_secteur));
-    setSuccessEdit("");
-    setErrorEdit("");
-  }
-
   async function handleModifierPoint(e) {
     e.preventDefault();
     setErrorEdit("");
@@ -215,7 +235,7 @@ function Points() {
         adresse: adresseEdit || "À définir",
         id_secteur: parseInt(secteurEdit),
       })
-      .eq("id_point", pointSelectionne.id_point);
+      .eq("id_point", pointDetail.id_point);
 
     if (error) {
       setErrorEdit("Erreur lors de la modification : " + error.message);
@@ -223,12 +243,28 @@ function Points() {
       setSuccessEdit("Point modifié avec succès !");
       setModeEdition(false);
       fetchData();
+      setPointDetail((prev) => ({
+        ...prev,
+        nom: nomEdit,
+        adresse: adresseEdit,
+        id_secteur: parseInt(secteurEdit),
+      }));
     }
   }
 
   const pleins = points.filter((p) => getStatut(p.id_point) === "plein").length;
   const moyens = points.filter((p) => getStatut(p.id_point) === "moyen").length;
   const totalPointages = pointages.length;
+
+  const detailNbPointages = pointDetail
+    ? getNbPointages(pointDetail.id_point)
+    : 0;
+  const detailNbMenages = pointDetail ? getNbMenages(pointDetail.id_point) : 0;
+  const detailPct =
+    detailNbMenages > 0
+      ? Math.round((detailNbPointages / detailNbMenages) * 100)
+      : 0;
+  const detailStatut = pointDetail ? getStatut(pointDetail.id_point) : "vide";
 
   return (
     <Layout>
@@ -244,9 +280,7 @@ function Points() {
           </div>
         )}
 
-        {/* GRID HAUT : formulaire + stats */}
         <div className={styles.gridTop}>
-          {/* Formulaire ajout */}
           <div className={styles.cardNoMargin}>
             <div className={styles.cardHead}>
               <span className={styles.cardTitle}>
@@ -319,7 +353,6 @@ function Points() {
             </form>
           </div>
 
-          {/* Stats */}
           <div className={styles.cardNoMargin}>
             <div className={styles.cardHead}>
               <span className={styles.cardTitle}>Vue d'ensemble</span>
@@ -409,7 +442,6 @@ function Points() {
           </div>
         </div>
 
-        {/* Grille des points */}
         {loading ? (
           <div className={styles.tdLoading}>Chargement...</div>
         ) : (
@@ -421,7 +453,11 @@ function Points() {
               const pct =
                 nbMenages > 0 ? Math.min((nb / nbMenages) * 100, 100) : 0;
               return (
-                <div key={p.id_point} className={getCardClass(statut)}>
+                <div
+                  key={p.id_point}
+                  className={`${getCardClass(statut)} ${styles.pointCardClickable}`}
+                  onClick={() => ouvrirDetail(p)}
+                >
                   <div className={styles.pointTop}>
                     <div>
                       <div className={styles.pointNom}>{p.nom}</div>
@@ -455,42 +491,12 @@ function Points() {
                     ></ion-icon>
                     <strong>{nbMenages}</strong> ménages affectés
                   </div>
-
-                  <button
-                    className={styles.btnDetails}
-                    onClick={() => ouvrirPopupPoint(p)}
-                  >
-                    <ion-icon name="eye-outline"></ion-icon>
-                    Voir détails / Modifier
-                  </button>
-
-                  {statut === "plein" && (
-                    <button
-                      className={styles.btnVider}
-                      onClick={() => setPointAVider(p)}
-                    >
-                      <ion-icon name="car-outline"></ion-icon>
-                      Marquer comme vidé
-                    </button>
-                  )}
-                  {statut === "moyen" && (
-                    <button className={styles.btnSurveiller}>
-                      <ion-icon name="time-outline"></ion-icon>À surveiller
-                    </button>
-                  )}
-                  {statut === "vide" && (
-                    <button className={styles.btnOk}>
-                      <ion-icon name="checkmark-outline"></ion-icon>
-                      Pas urgent
-                    </button>
-                  )}
                 </div>
               );
             })}
           </div>
         )}
 
-        {/* Historique des vidages */}
         <div className={styles.card}>
           <div className={styles.cardHead}>
             <span className={styles.cardTitle}>Historique des vidages</span>
@@ -548,7 +554,7 @@ function Points() {
 
       {/* POPUP CONFIRMATION VIDAGE */}
       {pointAVider && (
-        <div className={styles.overlay} onClick={() => setPointAVider(null)}>
+        <div className={styles.overlayTop} onClick={() => setPointAVider(null)}>
           <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
             <div className={styles.popupHead}>
               <div>
@@ -596,140 +602,229 @@ function Points() {
         </div>
       )}
 
-      {/* POPUP DETAILS POINT */}
-      {pointSelectionne && (
-        <div
-          className={styles.overlay}
-          onClick={() => setPointSelectionne(null)}
-        >
-          <div className={styles.popup} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.popupHead}>
+      {/* POPUP DÉTAIL POINT (2 colonnes) */}
+      {pointDetail && (
+        <div className={styles.overlay} onClick={fermerDetail}>
+          <div
+            className={styles.detailPopup}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.detailHeader}>
               <div>
-                <div className={styles.popupTitle}>{pointSelectionne.nom}</div>
-                <div className={styles.popupSub}>
-                  Secteur {pointSelectionne.secteur?.nom}
+                <div className={styles.detailNom}>{pointDetail.nom}</div>
+                <div className={styles.detailSub}>
+                  Secteur {pointDetail.secteur?.nom}
+                  <span style={{ marginLeft: 10 }}>
+                    {getBadge(detailStatut)}
+                  </span>
                 </div>
               </div>
-              <button
-                className={styles.btnFermer}
-                onClick={() => setPointSelectionne(null)}
-              >
+              <button className={styles.btnFermer} onClick={fermerDetail}>
                 ✕
               </button>
             </div>
-            <div className={styles.popupBody}>
-              {errorEdit && (
-                <div className={styles.alertError}>{errorEdit}</div>
-              )}
-              {successEdit && (
-                <div className={styles.alertSuccess}>{successEdit}</div>
-              )}
 
-              {!modeEdition ? (
-                <>
-                  <div className={styles.popupSection}>Statistiques</div>
-                  <div className={styles.popupGrid}>
-                    <div className={styles.popupStat}>
-                      <div className={styles.popupStatVal}>
-                        {getNbPointages(pointSelectionne.id_point)}
-                      </div>
-                      <div className={styles.popupStatLabel}>
-                        Pointages actuels
-                      </div>
-                    </div>
-                    <div className={styles.popupStat}>
-                      <div className={styles.popupStatVal}>
-                        {getNbMenages(pointSelectionne.id_point)}
-                      </div>
-                      <div className={styles.popupStatLabel}>
-                        Ménages affectés
-                      </div>
-                    </div>
-                  </div>
+            {errorEdit && (
+              <div
+                className={styles.alertError}
+                style={{ margin: "16px 24px 0" }}
+              >
+                {errorEdit}
+              </div>
+            )}
+            {successEdit && (
+              <div
+                className={styles.alertSuccess}
+                style={{ margin: "16px 24px 0" }}
+              >
+                {successEdit}
+              </div>
+            )}
 
-                  <div className={styles.popupSection}>Informations</div>
-                  <div className={styles.popupInfo}>
-                    <strong>Adresse :</strong>{" "}
-                    {pointSelectionne.adresse || "Non renseignée"}
-                  </div>
-                  <div className={styles.popupInfo}>
-                    <strong>Remplissage :</strong>{" "}
-                    {getNbMenages(pointSelectionne.id_point) > 0
-                      ? Math.round(
-                          (getNbPointages(pointSelectionne.id_point) /
-                            getNbMenages(pointSelectionne.id_point)) *
-                            100,
-                        )
-                      : 0}
-                    %
-                  </div>
+            <div className={styles.detailBody}>
+              <div className={styles.detailColumn}>
+                {!modeEdition ? (
+                  <>
+                    <div className={styles.detailSection}>Informations</div>
+                    <div className={styles.detailInfoGrid}>
+                      <div className={styles.detailInfoItem}>
+                        <div className={styles.detailInfoLabel}>Adresse</div>
+                        <div className={styles.detailInfoVal}>
+                          {pointDetail.adresse || "Non renseignée"}
+                        </div>
+                      </div>
+                      <div className={styles.detailInfoItem}>
+                        <div className={styles.detailInfoLabel}>Secteur</div>
+                        <div className={styles.detailInfoVal}>
+                          {pointDetail.secteur?.nom || "—"}
+                        </div>
+                      </div>
+                      <div className={styles.detailInfoItem}>
+                        <div className={styles.detailInfoLabel}>
+                          Seuil d'alerte
+                        </div>
+                        <div className={styles.detailInfoVal}>
+                          {pointDetail.seuil_alerte || 60}%
+                        </div>
+                      </div>
+                      <div className={styles.detailInfoItem}>
+                        <div className={styles.detailInfoLabel}>
+                          Remplissage
+                        </div>
+                        <div className={styles.detailInfoVal}>{detailPct}%</div>
+                      </div>
+                    </div>
 
-                  <button
-                    className={styles.btnConfirmer}
-                    onClick={() => setModeEdition(true)}
-                  >
-                    <ion-icon name="create-outline"></ion-icon>
-                    Modifier les informations
-                  </button>
-                  <button
-                    className={styles.btnAnnuler}
-                    onClick={() => setPointSelectionne(null)}
-                  >
-                    Fermer
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className={styles.popupSection}>Modifier le point</div>
-                  <form
-                    onSubmit={handleModifierPoint}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 12,
-                    }}
-                  >
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Nom du point *</label>
-                      <input
-                        className={styles.input}
-                        value={nomEdit}
-                        onChange={(e) => setNomEdit(e.target.value)}
-                      />
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Adresse</label>
-                      <input
-                        className={styles.input}
-                        value={adresseEdit}
-                        onChange={(e) => setAdresseEdit(e.target.value)}
-                      />
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Secteur *</label>
-                      <Select
-                        value={secteurEdit}
-                        onChange={(e) => setSecteurEdit(e.target.value)}
-                        options={secteurs.map((s) => ({
-                          value: String(s.id_secteur),
-                          label: s.nom,
-                        }))}
-                      />
-                    </div>
-                    <button type="submit" className={styles.btnConfirmer}>
-                      <ion-icon name="checkmark-outline"></ion-icon>
-                      Enregistrer les modifications
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.btnAnnuler}
-                      onClick={() => setModeEdition(false)}
+                    <div className={styles.detailSection}>Statistiques</div>
+                    <div
+                      className={styles.detailStatsRow}
+                      style={{ gridTemplateColumns: "1fr 1fr" }}
                     >
-                      Annuler
+                      <div className={styles.detailStatCard}>
+                        <div
+                          className={styles.detailStatVal}
+                          style={{ color: "#2DD4BF" }}
+                        >
+                          {detailNbPointages}
+                        </div>
+                        <div className={styles.detailStatLabel}>
+                          Pointages actuels
+                        </div>
+                      </div>
+                      <div className={styles.detailStatCard}>
+                        <div
+                          className={styles.detailStatVal}
+                          style={{ color: "#3B82F6" }}
+                        >
+                          {detailNbMenages}
+                        </div>
+                        <div className={styles.detailStatLabel}>
+                          Ménages affectés
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      className={styles.btnDetails}
+                      style={{ marginTop: 20 }}
+                      onClick={() => setModeEdition(true)}
+                    >
+                      <ion-icon name="create-outline"></ion-icon>
+                      Modifier les informations
                     </button>
-                  </form>
-                </>
-              )}
+                  </>
+                ) : (
+                  <>
+                    <div className={styles.detailSection}>
+                      Modifier le point
+                    </div>
+                    <form
+                      onSubmit={handleModifierPoint}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 12,
+                      }}
+                    >
+                      <div className={styles.formGroup}>
+                        <label className={styles.label}>Nom du point *</label>
+                        <input
+                          className={styles.input}
+                          value={nomEdit}
+                          onChange={(e) => setNomEdit(e.target.value)}
+                        />
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label className={styles.label}>Adresse</label>
+                        <input
+                          className={styles.input}
+                          value={adresseEdit}
+                          onChange={(e) => setAdresseEdit(e.target.value)}
+                        />
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label className={styles.label}>Secteur *</label>
+                        <Select
+                          value={secteurEdit}
+                          onChange={(e) => setSecteurEdit(e.target.value)}
+                          options={secteurs.map((s) => ({
+                            value: String(s.id_secteur),
+                            label: s.nom,
+                          }))}
+                        />
+                      </div>
+                      <button type="submit" className={styles.btnConfirmer}>
+                        <ion-icon name="checkmark-outline"></ion-icon>
+                        Enregistrer les modifications
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.btnAnnuler}
+                        onClick={() => setModeEdition(false)}
+                      >
+                        Annuler
+                      </button>
+                    </form>
+                  </>
+                )}
+              </div>
+
+              <div className={styles.detailColumn}>
+                <div className={styles.detailSection}>
+                  Ménages assignés ({menagesAssignes.length})
+                </div>
+                {detailLoading ? (
+                  <div className={styles.detailEmpty}>Chargement...</div>
+                ) : menagesAssignes.length === 0 ? (
+                  <div className={styles.detailEmpty}>
+                    Aucun ménage assigné à ce point
+                  </div>
+                ) : (
+                  <div
+                    className={styles.detailList}
+                    style={{ maxHeight: 260, overflowY: "auto" }}
+                  >
+                    {menagesAssignes.map((m) => (
+                      <div key={m.id_menage} className={styles.detailListItem}>
+                        <div className={styles.detailListLeft}>
+                          <div className={styles.detailListTitle}>{m.nom}</div>
+                          <div className={styles.detailListSub}>
+                            {m.telephone || "Pas de téléphone"}
+                          </div>
+                        </div>
+                        <span
+                          className={
+                            m.statut === "actif"
+                              ? styles.badgeVide
+                              : styles.badgeMoyen
+                          }
+                        >
+                          {m.statut === "actif" ? "Actif" : m.statut}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className={styles.detailSection}>Actions</div>
+                <div className={styles.detailActions}>
+                  {detailStatut === "plein" && (
+                    <button
+                      className={styles.btnVider}
+                      onClick={() => setPointAVider(pointDetail)}
+                    >
+                      <ion-icon name="car-outline"></ion-icon>
+                      Marquer comme vidé
+                    </button>
+                  )}
+                  {detailStatut !== "plein" && (
+                    <div className={styles.popupInfo} style={{ fontSize: 13 }}>
+                      Ce point n'a pas besoin d'être vidé pour le moment (
+                      {detailPct}% de remplissage).
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
