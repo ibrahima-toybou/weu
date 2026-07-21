@@ -23,13 +23,20 @@ function Menages() {
   const [filtreSecteur, setFiltreSecteur] = useState("tous");
   const [recherche, setRecherche] = useState("");
 
-  const [menageSelectionne, setMenageSelectionne] = useState(null);
+  // Popup détail
+  const [menageDetail, setMenageDetail] = useState(null);
+  const [detailPointages, setDetailPointages] = useState([]);
+  const [detailCotisations, setDetailCotisations] = useState([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  // Modal changement de point
   const [showModalPoint, setShowModalPoint] = useState(false);
   const [nouveauSecteurId, setNouveauSecteurId] = useState("");
   const [nouveauPointId, setNouveauPointId] = useState("");
   const [pointsModalFiltres, setPointsModalFiltres] = useState([]);
   const [savingPoint, setSavingPoint] = useState(false);
 
+  // Modal archivage
   const [showModalArchive, setShowModalArchive] = useState(false);
   const [menageAArchiver, setMenageAArchiver] = useState(null);
 
@@ -73,6 +80,52 @@ function Menages() {
     if (!secteursRes.error) setSecteurs(secteursRes.data);
     if (!pointsRes.error) setPoints(pointsRes.data);
     setLoading(false);
+  }
+
+  async function ouvrirDetail(menage) {
+    setMenageDetail(menage);
+    setDetailLoading(true);
+
+    const moisActuel = new Date().toISOString().slice(0, 7);
+
+    const [pointagesRes, cotisationsRes, utilisateurRes] = await Promise.all([
+      supabase
+        .from("pointage")
+        .select("*, point_collecte(nom)")
+        .eq("id_menage", menage.id_menage)
+        .order("date_heure", { ascending: false })
+        .limit(10),
+      supabase
+        .from("cotisation")
+        .select("*")
+        .eq("id_menage", menage.id_menage)
+        .order("periode", { ascending: false })
+        .limit(6),
+      supabase
+        .from("utilisateur")
+        .select("email, telephone")
+        .eq("id_menage", menage.id_menage)
+        .single(),
+    ]);
+
+    setDetailPointages(pointagesRes.data || []);
+    setDetailCotisations(cotisationsRes.data || []);
+
+    if (utilisateurRes.data) {
+      setMenageDetail((prev) => ({
+        ...prev,
+        email: utilisateurRes.data.email,
+        tel_utilisateur: utilisateurRes.data.telephone,
+      }));
+    }
+
+    setDetailLoading(false);
+  }
+
+  function fermerDetail() {
+    setMenageDetail(null);
+    setDetailPointages([]);
+    setDetailCotisations([]);
   }
 
   async function handleCreer(e) {
@@ -151,7 +204,10 @@ function Menages() {
       .from("menage")
       .update({ statut: nouveauStatut })
       .eq("id_menage", menage.id_menage);
-    if (!error) fetchData();
+    if (!error) {
+      fetchData();
+      if (menageDetail) ouvrirDetail({ ...menage, statut: nouveauStatut });
+    }
   }
 
   async function confirmerArchivage() {
@@ -162,6 +218,7 @@ function Menages() {
     if (!error) {
       setShowModalArchive(false);
       setMenageAArchiver(null);
+      fermerDetail();
       fetchData();
     }
   }
@@ -169,29 +226,30 @@ function Menages() {
   async function handleChangerPoint() {
     if (!nouveauPointId) return;
     setSavingPoint(true);
-
     const { error } = await supabase
       .from("menage")
       .update({
         id_point: parseInt(nouveauPointId),
         id_secteur: parseInt(nouveauSecteurId),
       })
-      .eq("id_menage", menageSelectionne.id_menage);
-
+      .eq("id_menage", menageDetail.id_menage);
     if (!error) {
       setShowModalPoint(false);
-      setMenageSelectionne(null);
       setNouveauSecteurId("");
       setNouveauPointId("");
       fetchData();
+      ouvrirDetail({
+        ...menageDetail,
+        id_point: parseInt(nouveauPointId),
+        id_secteur: parseInt(nouveauSecteurId),
+      });
     }
     setSavingPoint(false);
   }
 
-  function ouvrirModalPoint(menage) {
-    setMenageSelectionne(menage);
-    setNouveauSecteurId(String(menage.id_secteur));
-    setNouveauPointId(String(menage.id_point));
+  function ouvrirModalPoint() {
+    setNouveauSecteurId(String(menageDetail.id_secteur));
+    setNouveauPointId(String(menageDetail.id_point));
     setShowModalPoint(true);
   }
 
@@ -223,6 +281,18 @@ function Menages() {
     }
   }
 
+  function getCotBadge(statut) {
+    if (statut === "payé") return styles.badgeCotPaye;
+    if (statut === "exonéré") return styles.badgeCotExonere;
+    return styles.badgeCotRetard;
+  }
+
+  function getCotLabel(statut) {
+    if (statut === "payé") return "Payé";
+    if (statut === "exonéré") return "Exonéré";
+    return "En retard";
+  }
+
   const menagesFiltres = menages.filter((m) => {
     const matchStatut = filtreStatut === "tous" || m.statut === filtreStatut;
     const matchSecteur =
@@ -237,6 +307,17 @@ function Menages() {
   const actifs = menages.filter((m) => m.statut === "actif").length;
   const suspendus = menages.filter((m) => m.statut === "suspendu").length;
   const archives = menages.filter((m) => m.statut === "archive").length;
+
+  const moisActuel = new Date().toISOString().slice(0, 7);
+  const detailPointagesMois = detailPointages.filter((p) =>
+    p.date_heure?.startsWith(moisActuel),
+  ).length;
+  const detailCotPayees = detailCotisations.filter(
+    (c) => c.statut === "payé",
+  ).length;
+  const detailCotRetard = detailCotisations.filter(
+    (c) => c.statut === "en_retard" || !c.statut,
+  ).length;
 
   return (
     <Layout>
@@ -431,19 +512,22 @@ function Menages() {
                   <th className={styles.th}>Téléphone</th>
                   <th className={styles.th}>Inscription</th>
                   <th className={styles.th}>Statut</th>
-                  <th className={styles.th}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {menagesFiltres.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className={styles.tdEmpty}>
+                    <td colSpan={6} className={styles.tdEmpty}>
                       Aucun ménage trouvé
                     </td>
                   </tr>
                 ) : (
                   menagesFiltres.map((m) => (
-                    <tr key={m.id_menage}>
+                    <tr
+                      key={m.id_menage}
+                      className={styles.trClickable}
+                      onClick={() => ouvrirDetail(m)}
+                    >
                       <td className={styles.tdBold}>{m.nom}</td>
                       <td className={styles.td}>{m.secteur?.nom || "—"}</td>
                       <td className={styles.td}>
@@ -460,55 +544,6 @@ function Menages() {
                           {getStatutLabel(m.statut)}
                         </span>
                       </td>
-                      <td className={styles.td}>
-                        <div className={styles.actionsWrap}>
-                          {m.statut !== "archive" && (
-                            <button
-                              className={styles.btnSmallBlue}
-                              onClick={() => ouvrirModalPoint(m)}
-                            >
-                              Changer point
-                            </button>
-                          )}
-                          {m.statut === "actif" && (
-                            <button
-                              className={styles.btnSmallOrange}
-                              onClick={() => changerStatut(m, "suspendu")}
-                            >
-                              Suspendre
-                            </button>
-                          )}
-                          {m.statut === "suspendu" && (
-                            <>
-                              <button
-                                className={styles.btnSmallGreen}
-                                onClick={() => changerStatut(m, "actif")}
-                              >
-                                Réactiver
-                              </button>
-                              <button
-                                className={styles.btnSmallRed}
-                                onClick={() => changerStatut(m, "archive")}
-                              >
-                                Archiver
-                              </button>
-                            </>
-                          )}
-                          {m.statut === "en_attente" && (
-                            <button
-                              className={styles.btnSmallRed}
-                              onClick={() => changerStatut(m, "archive")}
-                            >
-                              Archiver
-                            </button>
-                          )}
-                          {m.statut === "archive" && (
-                            <span className={styles.badgeArchiveLabel}>
-                              Archivé définitivement
-                            </span>
-                          )}
-                        </div>
-                      </td>
                     </tr>
                   ))
                 )}
@@ -517,6 +552,246 @@ function Menages() {
           )}
         </div>
       </div>
+
+      {/* POPUP DÉTAIL MÉNAGE */}
+      {menageDetail && (
+        <div className={styles.modalOverlay} onClick={fermerDetail}>
+          <div
+            className={styles.detailPopup}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.detailHeader}>
+              <div>
+                <div className={styles.detailNom}>{menageDetail.nom}</div>
+                <div className={styles.detailSub}>
+                  {menageDetail.point_collecte?.nom} ·{" "}
+                  {menageDetail.secteur?.nom}
+                  <span
+                    className={getBadgeClass(menageDetail.statut)}
+                    style={{ marginLeft: 10 }}
+                  >
+                    {getStatutLabel(menageDetail.statut)}
+                  </span>
+                </div>
+              </div>
+              <button className={styles.modalClose} onClick={fermerDetail}>
+                ✕
+              </button>
+            </div>
+
+            {detailLoading ? (
+              <div
+                style={{ padding: 40, textAlign: "center", color: "#8A90A0" }}
+              >
+                Chargement...
+              </div>
+            ) : (
+              <div className={styles.detailBody}>
+                <div className={styles.detailColumn}>
+                  {/* INFOS */}
+                  <div className={styles.detailSection}>Informations</div>
+                  <div className={styles.detailInfoGrid}>
+                    <div className={styles.detailInfoItem}>
+                      <div className={styles.detailInfoLabel}>Nom</div>
+                      <div className={styles.detailInfoVal}>
+                        {menageDetail.nom}
+                      </div>
+                    </div>
+                    <div className={styles.detailInfoItem}>
+                      <div className={styles.detailInfoLabel}>Téléphone</div>
+                      <div className={styles.detailInfoVal}>
+                        {menageDetail.telephone || "—"}
+                      </div>
+                    </div>
+                    <div className={styles.detailInfoItem}>
+                      <div className={styles.detailInfoLabel}>Email</div>
+                      <div className={styles.detailInfoVal}>
+                        {menageDetail.email || "—"}
+                      </div>
+                    </div>
+                    <div className={styles.detailInfoItem}>
+                      <div className={styles.detailInfoLabel}>Inscription</div>
+                      <div className={styles.detailInfoVal}>
+                        {new Date(
+                          menageDetail.date_inscription,
+                        ).toLocaleDateString("fr-FR")}
+                      </div>
+                    </div>
+                    <div className={styles.detailInfoItem}>
+                      <div className={styles.detailInfoLabel}>
+                        Point de collecte
+                      </div>
+                      <div className={styles.detailInfoVal}>
+                        {menageDetail.point_collecte?.nom || "—"}
+                      </div>
+                    </div>
+                    <div className={styles.detailInfoItem}>
+                      <div className={styles.detailInfoLabel}>Secteur</div>
+                      <div className={styles.detailInfoVal}>
+                        {menageDetail.secteur?.nom || "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* RÉSUMÉ ACTIVITÉ */}
+                  <div className={styles.detailSection}>Résumé d'activité</div>
+                  <div className={styles.detailStatsRow}>
+                    <div className={styles.detailStatCard}>
+                      <div
+                        className={styles.detailStatVal}
+                        style={{ color: "#2DD4BF" }}
+                      >
+                        {detailPointagesMois}
+                      </div>
+                      <div className={styles.detailStatLabel}>Dépôts/mois</div>
+                    </div>
+                    <div className={styles.detailStatCard}>
+                      <div
+                        className={styles.detailStatVal}
+                        style={{ color: "#3B82F6" }}
+                      >
+                        {detailPointages.length}
+                      </div>
+                      <div className={styles.detailStatLabel}>Total</div>
+                    </div>
+                    <div className={styles.detailStatCard}>
+                      <div
+                        className={styles.detailStatVal}
+                        style={{ color: "#34D399" }}
+                      >
+                        {detailCotPayees}
+                      </div>
+                      <div className={styles.detailStatLabel}>Payés</div>
+                    </div>
+                    <div className={styles.detailStatCard}>
+                      <div
+                        className={styles.detailStatVal}
+                        style={{ color: "#FB7185" }}
+                      >
+                        {detailCotRetard}
+                      </div>
+                      <div className={styles.detailStatLabel}>Retard</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.detailColumn}>
+                  {/* DERNIERS POINTAGES */}
+                  <div className={styles.detailSection}>Derniers dépôts</div>
+                  {detailPointages.length === 0 ? (
+                    <div className={styles.detailEmpty}>
+                      Aucun dépôt enregistré
+                    </div>
+                  ) : (
+                    <div className={styles.detailList}>
+                      {detailPointages.slice(0, 5).map((p, i) => (
+                        <div key={i} className={styles.detailListItem}>
+                          <div className={styles.detailListLeft}>
+                            <div className={styles.detailListTitle}>
+                              {p.point_collecte?.nom}
+                            </div>
+                            <div className={styles.detailListSub}>
+                              {new Date(p.date_heure).toLocaleDateString(
+                                "fr-FR",
+                              )}{" "}
+                              ·{" "}
+                              {new Date(p.date_heure).toLocaleTimeString(
+                                "fr-FR",
+                                { hour: "2-digit", minute: "2-digit" },
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* COTISATIONS */}
+                  <div className={styles.detailSection}>
+                    Cotisations récentes
+                  </div>
+                  {detailCotisations.length === 0 ? (
+                    <div className={styles.detailEmpty}>Aucune cotisation</div>
+                  ) : (
+                    <div className={styles.detailList}>
+                      {detailCotisations.map((c, i) => (
+                        <div key={i} className={styles.detailListItem}>
+                          <div className={styles.detailListLeft}>
+                            <div className={styles.detailListTitle}>
+                              {new Date(c.periode).toLocaleDateString("fr-FR", {
+                                month: "long",
+                                year: "numeric",
+                              })}
+                            </div>
+                            <div className={styles.detailListSub}>
+                              {c.statut === "payé"
+                                ? `Payé le ${new Date(c.date_paiement).toLocaleDateString("fr-FR")}`
+                                : getCotLabel(c.statut)}
+                            </div>
+                          </div>
+                          <span className={getCotBadge(c.statut)}>
+                            {getCotLabel(c.statut)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* ACTIONS */}
+                  <div className={styles.detailSection}>Actions</div>
+                  <div className={styles.detailActions}>
+                    {menageDetail.statut !== "archive" && (
+                      <button
+                        className={styles.btnSmallBlue}
+                        onClick={ouvrirModalPoint}
+                      >
+                        Changer le point de collecte
+                      </button>
+                    )}
+                    {menageDetail.statut === "actif" && (
+                      <button
+                        className={styles.btnSmallOrange}
+                        onClick={() => changerStatut(menageDetail, "suspendu")}
+                      >
+                        Suspendre
+                      </button>
+                    )}
+                    {menageDetail.statut === "suspendu" && (
+                      <>
+                        <button
+                          className={styles.btnSmallGreen}
+                          onClick={() => changerStatut(menageDetail, "actif")}
+                        >
+                          Réactiver
+                        </button>
+                        <button
+                          className={styles.btnSmallRed}
+                          onClick={() => changerStatut(menageDetail, "archive")}
+                        >
+                          Archiver
+                        </button>
+                      </>
+                    )}
+                    {menageDetail.statut === "en_attente" && (
+                      <button
+                        className={styles.btnSmallRed}
+                        onClick={() => changerStatut(menageDetail, "archive")}
+                      >
+                        Archiver
+                      </button>
+                    )}
+                    {menageDetail.statut === "archive" && (
+                      <span className={styles.badgeArchiveLabel}>
+                        Archivé définitivement
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* MODAL CHANGEMENT DE POINT */}
       {showModalPoint && (
@@ -541,10 +816,10 @@ function Menages() {
             </div>
             <div className={styles.modalBody}>
               <p className={styles.modalSub}>
-                Ménage : <strong>{menageSelectionne?.nom}</strong>
+                Ménage : <strong>{menageDetail?.nom}</strong>
                 <br />
                 Point actuel :{" "}
-                <strong>{menageSelectionne?.point_collecte?.nom}</strong>
+                <strong>{menageDetail?.point_collecte?.nom}</strong>
               </p>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Nouveau secteur</label>
