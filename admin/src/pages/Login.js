@@ -213,7 +213,11 @@ function Login() {
                 </span>
                 Se souvenir de moi
               </label>
-              <button type="button" className={styles.forgotBtn}>
+              <button
+                type="button"
+                className={styles.forgotBtn}
+                onClick={() => navigate("/reset-password")}
+              >
                 Mot de passe oublié ?
               </button>
             </div>
