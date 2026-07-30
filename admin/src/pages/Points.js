@@ -271,7 +271,7 @@ function Points() {
       <div className={styles.page}>
         <div className={styles.pageHeader}>
           <div className={styles.title}>Points de collecte</div>
-          <div className={styles.sub}>État en temps réel — Quartier Madina</div>
+          <div className={styles.sub}>État en temps réel · Quartier Madina</div>
         </div>
 
         {successVidage && (
