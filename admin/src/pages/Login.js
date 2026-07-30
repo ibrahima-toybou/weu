@@ -233,12 +233,7 @@ function Login() {
             </button>
           </form>
 
-          <p className={styles.formFooter}>
-            Besoin d'un accès ?{" "}
-            <button type="button" className={styles.footerBtn}>
-              Contactez l'administrateur
-            </button>
-          </p>
+          <p className={styles.formFooter}>Accès réservé à l'administration</p>
         </div>
       </div>
     </div>
