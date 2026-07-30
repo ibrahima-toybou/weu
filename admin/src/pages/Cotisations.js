@@ -213,7 +213,7 @@ function Cotisations() {
           <div>
             <div className={styles.title}>Gestion des cotisations</div>
             <div className={styles.sub}>
-              Suivi des paiements — Quartier Madina
+              Suivi des paiements · Quartier Madina
             </div>
           </div>
           <div className={styles.moisSelector}>
@@ -236,7 +236,7 @@ function Cotisations() {
           <div className={styles.cardNoMargin}>
             <div className={styles.cardHead}>
               <div className={styles.cardTitle}>
-                Ménages — {getPeriodeLabel(moisSelectionne + "-01")}
+                Ménages · {getPeriodeLabel(moisSelectionne + "-01")}
               </div>
               <span className={styles.cardCount}>
                 {menagesFiltres.length} résultat(s)
