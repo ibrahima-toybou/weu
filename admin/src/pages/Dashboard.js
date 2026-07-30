@@ -127,27 +127,6 @@ function Dashboard() {
     <Layout>
       <div className={styles.page}>
         {/* HEADER */}
-        <div className={styles.header}>
-          <div className={styles.headerLogo}>
-            <div className={styles.headerLogoIcon}>W</div>
-            <div>
-              <div className={styles.headerLogoName}>Weu</div>
-              <div className={styles.headerLogoSub}>
-                Administration · Madina
-              </div>
-            </div>
-          </div>
-          <div className={styles.headerRight}>
-            <div className={styles.headerDate}>
-              <ion-icon
-                name="calendar-outline"
-                style={{ color: "#8A90A0", fontSize: 14 }}
-              ></ion-icon>
-              {dateLabel}
-            </div>
-            <div className={styles.headerAvatar}>MA</div>
-          </div>
-        </div>
 
         {/* MAIN */}
         <div className={styles.main}>
