@@ -254,7 +254,7 @@ function Tournees() {
         <div className={styles.pageHeader}>
           <div className={styles.title}>Tournées</div>
           <div className={styles.sub}>
-            Supervision et planification — Quartier Madina
+            Supervision et planification · Quartier Madina
           </div>
         </div>
 
@@ -292,7 +292,7 @@ function Tournees() {
                       }}
                     >
                       <ion-icon name="flash-outline"></ion-icon>
-                      Tournée urgente — En attente d'acceptation
+                      Tournée urgente · En attente d'acceptation
                     </div>
                     <div className={styles.propositionDesc}>
                       {tu.tournee_point
@@ -328,7 +328,7 @@ function Tournees() {
                       color: pointsPleins.length > 0 ? "#FB7185" : "#34D399",
                     }}
                   >
-                    Proposition A — Tournée immédiate
+                    Proposition A · Tournée immédiate
                   </div>
                   <div className={styles.propositionDesc}>
                     {pointsPleins.length > 0
@@ -354,7 +354,7 @@ function Tournees() {
                       color: pointsMoyens.length > 0 ? "#FBBF24" : "#34D399",
                     }}
                   >
-                    Proposition B — Tournée demain
+                    Proposition B · Tournée demain
                   </div>
                   <div className={styles.propositionDesc}>
                     {pointsMoyens.length > 0
