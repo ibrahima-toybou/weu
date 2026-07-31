@@ -199,7 +199,7 @@ function Finances() {
       <div className={styles.page}>
         <div className={styles.pageHeader}>
           <div className={styles.title}>Finances</div>
-          <div className={styles.sub}>Suivi financier — Quartier Madina</div>
+          <div className={styles.sub}>Suivi financier · Quartier Madina</div>
         </div>
 
         <div className={styles.gridTop}>
