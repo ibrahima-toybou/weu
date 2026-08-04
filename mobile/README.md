@@ -1,50 +1,74 @@
-# Welcome to your Expo app 👋
+# Weu — Application Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Application React Native pour les habitants et agents de terrain du quartier Madina (Comores), pensée pour fonctionner en conditions de réseau instable.
 
-## Get started
+## Stack technique
 
-1. Install dependencies
+- **React Native** (Expo SDK 54, Expo Router — navigation par fichiers)
+- **Supabase** — base de données, authentification
+- **AsyncStorage** — persistance de session et cache hors-ligne
 
-   ```bash
-   npm install
-   ```
+## Fonctionnalités
 
-2. Start the app
+### Habitant
 
-   ```bash
-   npx expo start
-   ```
+- Pointage de dépôt de déchets en un geste — fonctionne **sans réseau**
+- Suivi et paiement de la cotisation mensuelle
+- Historique des dépôts et des paiements
+- Consultation des finances du quartier (transparence)
 
-In the output, you'll find options to open the app in a
+### Agent de terrain
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- Propositions automatiques de tournées selon le taux de remplissage des points
+- Acceptation et suivi des tournées
+- Historique des tournées effectuées
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Mode hors-ligne
 
-## Get a fresh project
+Point technique central du projet : à Madina, le réseau est instable et beaucoup d'habitants n'ont pas de connexion continue.
 
-When you're ready, run:
+- **Persistance de session** — un utilisateur déjà connecté reste connecté sans réseau
+- **File d'attente locale** — un pointage effectué hors-ligne est stocké localement, puis synchronisé automatiquement dès que le réseau revient (avec verrou anti-doublon)
+- **Cache par page** — chaque écran affiche les dernières données connues en attendant le réseau, au lieu d'un écran de chargement bloqué
+- **Indicateur discret** — l'utilisateur voit le nombre d'actions en attente de synchronisation sans que l'app ait l'air "cassée"
+
+## Installation
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Variables d'environnement
 
-## Learn more
+Créer un fichier `.env` à la racine :
 
-To learn more about developing your project with Expo, look at the following resources:
+EXPO_PUBLIC_SUPABASE_URL=<url_supabase>
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<clé_anon_supabase>
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Lancer en développement
 
-## Join the community
+```bash
+npx expo start
+```
 
-Join our community of developers creating universal apps.
+## Build (preview / production)
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+eas build --profile preview --platform android
+```
+
+Nécessite un compte [Expo / EAS](https://expo.dev).
+
+## Structure
+
+app/
+├── index.tsx # Connexion (persistance de session, mot de passe oublié)
+├── (tabs)/ # Interface habitant
+└── (agent)/ # Interface agent de terrain
+lib/
+├── supabase.ts # Client Supabase configuré pour la persistance de session
+├── offlineQueue.ts # File d'attente et synchronisation hors-ligne
+└── theme.ts # Design tokens (couleurs, typographie)
+styles/
+├── tabs/ # Styles interface habitant
+└── agent/ # Styles interface agent
