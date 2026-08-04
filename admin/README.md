@@ -1,70 +1,65 @@
-# Getting Started with Create React App
+# Weu — Interface Admin
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Tableau de bord web de la plateforme **Weu**, permettant à l'administrateur du quartier Madina de piloter la collecte de déchets et le suivi des cotisations en temps réel.
 
-## Available Scripts
+## Stack technique
 
-In the project directory, you can run:
+- **React.js** (Create React App)
+- **Supabase** — PostgreSQL, authentification, Edge Functions
+- **CSS Modules** — styles scopés par composant
+- **Resend** — envoi d'emails transactionnels
 
-### `npm start`
+## Fonctionnalités
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Tableau de bord** — indicateurs clés (ménages actifs, cotisations du mois, points urgents, solde)
+- **Gestion des ménages** — création avec invitation par email, suspension, archivage, changement de point de collecte, fiche détaillée avec historique d'activité
+- **Gestion des cotisations** — enregistrement des paiements cash, historique, envoi automatique d'un reçu de paiement par email avec code de vérification anti-fraude
+- **Gestion des points de collecte** — état de remplissage en temps réel, seuils d'alerte, validation de vidage, historique
+- **Gestion des tournées** — planification et suivi
+- **Finances** — vue consolidée cotisations / dépenses / solde
+- **Authentification** — accès réservé au rôle `super_admin`
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Sécurité
 
-### `npm test`
+Row Level Security (RLS) activé sur l'ensemble des tables Supabase. Chaque rôle (`habitant`, `agent_terrain`, `super_admin`) n'a accès qu'aux données que ses permissions autorisent, y compris en accès direct à l'API — pas seulement via l'interface.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Installation
 
-### `npm run build`
+```bash
+npm install
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Variables d'environnement
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Créer un fichier `.env` à la racine :
+REACT_APP_SUPABASE_URL=<url_supabase>
+REACT_APP_SUPABASE_ANON_KEY=<clé_anon_supabase>
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Lancer en développement
 
-### `npm run eject`
+```bash
+npm start
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Disponible sur [http://localhost:3000](http://localhost:3000).
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Build de production
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```bash
+npm run build
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Génère un dossier `build/` prêt à déployer (Vercel).
 
-## Learn More
+## Structure
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+src/
+├── pages/ # Dashboard, Menages, Cotisations, Points, Tournees, Finances, Login
+├── components/ # Layout (navigation), Select (composant de formulaire)
+└── supabase.js # Client Supabase
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Edge Functions liées
 
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- `creer-menage` — inscription d'un ménage + envoi de l'invitation
+- `reset-password` — réinitialisation de mot de passe
+- `envoyer-facture` — génération et envoi du reçu de cotisation
