@@ -1,4 +1,4 @@
-# 🌿 Weu — Plateforme de gestion de la collecte de déchets
+#  Weu — Plateforme de gestion de la collecte de déchets
 
 Application complète (mobile + web) développée pour digitaliser la collecte de déchets et les cotisations du quartier **Madina, Comores**. Le projet remplace un suivi papier par une solution temps réel utilisée par les habitants, un agent de terrain et un administrateur.
 
