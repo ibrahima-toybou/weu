@@ -6,7 +6,7 @@ Application complète (mobile + web) développée pour digitaliser la collecte d
 
 |                                |                                                                    |
 | ------------------------------ | ------------------------------------------------------------------ |
-| 🏠 **200+ ménages**            | Suivi individuel des dépôts et cotisations                         |
+| 🏠 ** ménages**            | Suivi individuel des dépôts et cotisations                         |
 | 📍 **Points de collecte**      | État en temps réel, seuils d'alerte, historique de vidage          |
 | 📶 **Mode hors-ligne**         | L'app mobile fonctionne sans réseau et synchronise automatiquement |
 | 🧾 **Facturation automatique** | Reçu de paiement envoyé par email à chaque cotisation              |
